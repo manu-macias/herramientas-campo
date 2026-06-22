@@ -33,6 +33,38 @@ const DEFAULTS = {
 };
 
 const TABS = ["📊 Decisión", "⚙️ Mi situación", "📅 Historial"];
+
+// Datos campaña 2026-2027 (ventas_sj_backup)
+const MESES_CAMP = ["JUN","JUL","AGO","SEP","OCT","NOV","DIC","ENE","FEB","MAR","ABR","MAY"];
+const VENTAS = [
+  { nombre:"MANU",    stock:12,  ventas:[1.5,0,0,0,0,0,0,0,0,0,0,0], resto:10.5 },
+  { nombre:"MARTI",   stock:12,  ventas:[0.8,0,0,0,0,0,0,0,0,0,0,0], resto:11.2 },
+  { nombre:"TOMÁS",   stock:12,  ventas:[2.5,0,0,0,0,0,0,0,0,0,0,0], resto:9.5  },
+  { nombre:"ANDREA",  stock:12,  ventas:[1.0,0,0,0,0,0,0,0,0,0,0,0], resto:11.0 },
+  { nombre:"ANÍBAL",  stock:12,  ventas:[1.0,0,0,0,0,0,0,0,0,0,0,0], resto:11.0 },
+  { nombre:"COMUNES", stock:12,  ventas:[1.2,0,0,0,0,0,0,0,0,0,0,0], resto:10.8 },
+  { nombre:"CAMPO",   stock:12,  ventas:[0,0,0,0,0,0,0,0,0,0,0,0],   resto:12.0 },
+];
+const TOTAL_VENTAS = { stock:84, ventas:[8,0,0,0,0,0,0,0,0,0,0,0], resto:76 };
+
+const PRECIOS_HIST = [
+  { mes:"MAR 2025", dolar:1300,  soja:329000 },
+  { mes:"ABR 2025", dolar:1185,  soja:314000 },
+  { mes:"MAY 2025", dolar:1180,  soja:310000 },
+  { mes:"JUN 2025", dolar:1215,  soja:322000 },
+  { mes:"JUL 2025", dolar:1335,  soja:335000 },
+  { mes:"AGO 2025", dolar:1350,  soja:389000 },
+  { mes:"SEP 2025", dolar:1445,  soja:436000 },
+  { mes:"OCT 2025", dolar:1445,  soja:482000 },
+  { mes:"NOV 2025", dolar:1435,  soja:485000 },
+  { mes:"DIC 2025", dolar:1530,  soja:495000 },
+  { mes:"ENE 2026", dolar:1470,  soja:480000 },
+  { mes:"FEB 2026", dolar:1425,  soja:466000 },
+  { mes:"MAR 2026", dolar:1405,  soja:484000 },
+  { mes:"ABR 2026", dolar:1400,  soja:431000 },
+  { mes:"MAY 2026", dolar:1430,  soja:455000 },
+  { mes:"JUN 2026", dolar:1435,  soja:465000 },
+];
 const COLORS = { green: "#22c55e", red: "#ef4444", yellow: "#eab308", blue: "#7a9fff", gray: "#4a5568" };
 
 function calcScore(v) {
@@ -229,14 +261,93 @@ function App() {
   );
 
   // TAB 2: Historial
+  const [histSub, setHistSub] = useState(0);
+  const HIST_SUBS = ["📦 Ventas", "📈 Precios", "✏️ Registros"];
+
   const decisionColors = {
     soja:    { bg:"#0b1f11", col:"#22c55e", brd:"#22c55e", lbl:"🌾 Soja" },
     dolares: { bg:"#1a1600", col:"#eab308", brd:"#eab308", lbl:"💵 Dólares" },
     mixto:   { bg:"#0e1225", col:"#7a9fff", brd:"#3b5bdb", lbl:"⚖️ Mixto" },
   };
 
-  const tabHistorial = h("div", null,
-    h("div", { style: S.secLabel }, "Registrar mes"),
+  const thStyle = { fontSize:9, textTransform:"uppercase", letterSpacing:"0.07em", color:"#2e3650", fontWeight:700, padding:"6px 8px", textAlign:"right", borderBottom:"1px solid #1e2130", whiteSpace:"nowrap" };
+  const tdStyle = { padding:"6px 8px", color:"#8a9ab8", borderBottom:"1px solid #141722", textAlign:"right", fontSize:12 };
+  const tdName  = { padding:"6px 8px", color:"#c4cfe8", borderBottom:"1px solid #141722", fontSize:12, fontWeight:600 };
+
+  // Sub-tab: Ventas por socio
+  const subVentas = h("div", null,
+    h("div", { style: { fontSize:10, color:"#3a4460", marginBottom:10, lineHeight:1.6 } },
+      "Campaña 2026-2027 · Stock inicial 12 tn/socio · Precio actual: $" + FMT(465000) + "/tn"
+    ),
+    h("div", { style: { overflowX:"auto" } },
+      h("table", { style: { width:"100%", borderCollapse:"collapse" } },
+        h("thead", null,
+          h("tr", null,
+            h("th", { style: { ...thStyle, textAlign:"left" } }, "Socio"),
+            h("th", { style: thStyle }, "Stock"),
+            ...MESES_CAMP.map((m,i) => h("th", { key:i, style: thStyle }, m)),
+            h("th", { style: { ...thStyle, color:"#7a9fff" } }, "Resto")
+          )
+        ),
+        h("tbody", null,
+          ...VENTAS.map((r, ri) =>
+            h("tr", { key:ri },
+              h("td", { style: tdName }, r.nombre),
+              h("td", { style: tdStyle }, r.stock),
+              ...r.ventas.map((v2, mi) =>
+                h("td", { key:mi, style: { ...tdStyle, color: v2 > 0 ? "#22c55e" : "#2e3650" } }, v2 > 0 ? v2 : "—")
+              ),
+              h("td", { style: { ...tdStyle, color:"#7a9fff", fontWeight:700 } }, r.resto)
+            )
+          ),
+          h("tr", null,
+            h("td", { style: { ...tdName, color:"#e8edf5", borderTop:"1px solid #3a4460" } }, "TOTAL"),
+            h("td", { style: { ...tdStyle, fontWeight:700, color:"#e8edf5", borderTop:"1px solid #3a4460" } }, TOTAL_VENTAS.stock),
+            ...TOTAL_VENTAS.ventas.map((v2, mi) =>
+              h("td", { key:mi, style: { ...tdStyle, fontWeight:700, color: v2 > 0 ? "#22c55e" : "#2e3650", borderTop:"1px solid #3a4460" } }, v2 > 0 ? v2 : "—")
+            ),
+            h("td", { style: { ...tdStyle, fontWeight:700, color:"#7a9fff", borderTop:"1px solid #3a4460" } }, TOTAL_VENTAS.resto)
+          )
+        )
+      )
+    ),
+    h("div", { style: { marginTop:12, padding:"10px 12px", background:"#0b1f11", border:"1px solid #1e3322", borderRadius:8, fontSize:11, color:"#4a7a5a" } },
+      "🌾 Total vendido JUN: ",
+      h("span", { style: { color:"#22c55e", fontWeight:700 } }, "8 tn"),
+      "  ·  Facturación: ",
+      h("span", { style: { color:"#22c55e", fontWeight:700 } }, "$" + FMT(8 * 465000)),
+      "  ·  Resto campaña: ",
+      h("span", { style: { color:"#7a9fff", fontWeight:700 } }, "76 tn")
+    )
+  );
+
+  // Sub-tab: Precios históricos
+  const subPrecios = h("div", null,
+    h("div", { style: { overflowX:"auto" } },
+      h("table", { style: { width:"100%", borderCollapse:"collapse" } },
+        h("thead", null,
+          h("tr", null,
+            ...["Mes", "Dólar Blue", "Soja $/tn"].map((lbl,i) =>
+              h("th", { key:i, style: { ...thStyle, textAlign: i===0 ? "left" : "right" } }, lbl)
+            )
+          )
+        ),
+        h("tbody", null,
+          ...[...PRECIOS_HIST].reverse().map((row, ri) => {
+            const isActual = row.mes === "JUN 2026";
+            return h("tr", { key:ri, style: isActual ? { background:"#0e1a0e" } : {} },
+              h("td", { style: { ...tdName, color: isActual ? "#22c55e" : "#8a9ab8" } }, row.mes + (isActual ? " ◀" : "")),
+              h("td", { style: { ...tdStyle, color: isActual ? "#eab308" : "#8a9ab8" } }, "$" + FMT(row.dolar)),
+              h("td", { style: { ...tdStyle, color: isActual ? "#22c55e" : "#8a9ab8" } }, "$" + FMT(row.soja))
+            );
+          })
+        )
+      )
+    )
+  );
+
+  // Sub-tab: Registros manuales
+  const subRegistros = h("div", null,
     h("div", { style: { ...S.grid2, marginBottom:8 } },
       ...[
         { lbl:"Mes", key:"mes", type:"text", placeholder:"Jun 2026" },
@@ -251,7 +362,7 @@ function App() {
         )
       ),
       h("div", { style: S.card },
-        h("div", { style: { fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", color:"#3a4460", marginBottom:5 } }, "Decisión tomada"),
+        h("div", { style: { fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", color:"#3a4460", marginBottom:5 } }, "Decisión"),
         h("select", { value:hForm.decision, onChange: e => setHForm(p => ({ ...p, decision: e.target.value })),
           style: { background:"transparent", border:"none", outline:"none", color:"#e8edf5", fontSize:13, fontWeight:600, fontFamily:"inherit", width:"100%", cursor:"pointer" } },
           h("option", { value:"soja" }, "🌾 Soja"),
@@ -267,17 +378,17 @@ function App() {
         setHForm({ mes:"", soja:"", dolar:"", decision:"soja" });
       },
       style: { width:"100%", padding:10, background:"#3b5bdb", border:"none", borderRadius:9, color:"white", fontSize:13, fontWeight:700, cursor:"pointer", marginBottom:14 }
-    }, "+ Agregar al historial"),
+    }, "+ Agregar registro"),
     hist.length === 0
       ? h("div", { style: { textAlign:"center", color:"#2e3650", fontSize:12, padding:"28px 16px", border:"1px dashed #1e2130", borderRadius:9 } },
-          "Todavía no registraste ningún mes.", h("br"), "Usá el formulario de arriba para llevar el registro."
+          "Sin registros todavía."
         )
       : h("div", { style: { overflowX:"auto" } },
           h("table", { style: { width:"100%", borderCollapse:"collapse", fontSize:12 } },
             h("thead", null,
               h("tr", null,
                 ...["Mes","Soja","Dólar","Decisión",""].map((lbl,i) =>
-                  h("th", { key:i, style: { fontSize:9, textTransform:"uppercase", letterSpacing:"0.08em", color:"#2e3650", fontWeight:700, padding:"6px 8px", textAlign:"left", borderBottom:"1px solid #1e2130" } }, lbl)
+                  h("th", { key:i, style: { ...thStyle, textAlign: i===0?"left":"right" } }, lbl)
                 )
               )
             ),
@@ -287,8 +398,8 @@ function App() {
                 const bc = decisionColors[row.decision] || decisionColors.mixto;
                 return h("tr", { key:ri },
                   h("td", { style: { padding:"8px", color:"#8a9ab8", borderBottom:"1px solid #141722" } }, row.mes),
-                  h("td", { style: { padding:"8px", color:"#8a9ab8", borderBottom:"1px solid #141722" } }, "$" + FMT(row.soja)),
-                  h("td", { style: { padding:"8px", color:"#8a9ab8", borderBottom:"1px solid #141722" } }, "$" + FMT(row.dolar)),
+                  h("td", { style: tdStyle }, "$" + FMT(row.soja)),
+                  h("td", { style: tdStyle }, "$" + FMT(row.dolar)),
                   h("td", { style: { padding:"8px", borderBottom:"1px solid #141722" } },
                     h("span", { style: { display:"inline-block", padding:"2px 7px", borderRadius:4, fontSize:10, fontWeight:700, background:bc.bg, color:bc.col, border:`1px solid ${bc.brd}` } }, bc.lbl)
                   ),
@@ -301,6 +412,19 @@ function App() {
             )
           )
         )
+  );
+
+  const tabHistorial = h("div", null,
+    // Sub-tabs
+    h("div", { style: { display:"flex", gap:5, marginBottom:14 } },
+      ...HIST_SUBS.map((t,i) =>
+        h("button", { key:i, onClick: () => setHistSub(i),
+          style: { flex:1, padding:"7px 4px", borderRadius:7, border:`1px solid ${histSub===i?"#22c55e":"#1e2130"}`, background:histSub===i?"#0b1f11":"#141722", color:histSub===i?"#22c55e":"#4a5568", fontSize:10, fontWeight:600, cursor:"pointer" } },
+          t
+        )
+      )
+    ),
+    histSub === 0 ? subVentas : histSub === 1 ? subPrecios : subRegistros
   );
 
   return h("div", { style: S.page },
