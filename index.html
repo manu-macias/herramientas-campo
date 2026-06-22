@@ -22,7 +22,7 @@
 <script>
 const { useState, useEffect, createElement: h } = React;
 
-const PASS_HASH = "82abcf76bd4eceabc29b85fb7cf90f999c0de5a8673e66a85c6d827a3c664259";
+const PASS_HASH = "7dca3a2295651cd47867174d10fd26f1c0f6b0bc09393552309c4c9a5fdbee94";
 
 async function hashStr(str) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
