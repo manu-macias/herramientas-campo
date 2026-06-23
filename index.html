@@ -153,6 +153,13 @@ function App() {
   const [apiErr,  setApiErr]  = useState(null);
 
   useEffect(() => {
+    fetch("prices.json?t=" + Date.now())
+      .then(r => r.json())
+      .then(d => { if (d.soja) setV(prev => ({ ...prev, soja_hoy: d.soja })); })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (!auth) return;
     setApiLoad(true);
     fetch(API_URL)
@@ -160,10 +167,6 @@ function App() {
       .then(d => {
         setApiData(d);
         setApiLoad(false);
-        if (d.precios && d.precios.length) {
-          const latest = d.precios[d.precios.length - 1];
-          setV(prev => ({ ...prev, soja_hoy: latest.soja }));
-        }
       })
       .catch(() => { setApiErr("No se pudo cargar la planilla."); setApiLoad(false); });
   }, [auth]);

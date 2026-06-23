@@ -1,0 +1,48 @@
+name: Actualizar precio soja desde BCR
+
+on:
+  schedule:
+    - cron: '0 12 * * 1-5'  # 9am Argentina (UTC-3), lunes a viernes
+  workflow_dispatch:          # permite correrlo manualmente
+
+jobs:
+  update-prices:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Obtener precio soja de BCR
+        run: |
+          python3 << 'PYEOF'
+          import urllib.request, re, json, datetime
+
+          url = "https://www.cac.bcr.com.ar/es/precios-de-pizarra"
+          req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+          html = urllib.request.urlopen(req, timeout=15).read().decode("utf-8")
+
+          m = re.search(r'board-soja.*?<div class="price">\s*\$([\d.,]+)', html, re.DOTALL)
+          if not m:
+              raise ValueError("No se encontro el precio de soja en BCR")
+
+          soja = int(m.group(1).replace(".", "").split(",")[0])
+
+          data = {
+              "soja": soja,
+              "fecha": datetime.date.today().isoformat(),
+              "fuente": "https://www.cac.bcr.com.ar/es/precios-de-pizarra"
+          }
+
+          with open("prices.json", "w") as f:
+              json.dump(data, f, ensure_ascii=False, indent=2)
+
+          print(f"Precio soja actualizado: ${soja:,}")
+          PYEOF
+
+      - name: Commit prices.json si cambio
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add prices.json
+          git diff --cached --quiet || (git commit -m "chore: precio soja BCR $(date +'%Y-%m-%d')" && git push)
