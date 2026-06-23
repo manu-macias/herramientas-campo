@@ -157,7 +157,14 @@ function App() {
     setApiLoad(true);
     fetch(API_URL)
       .then(r => r.json())
-      .then(d => { setApiData(d); setApiLoad(false); })
+      .then(d => {
+        setApiData(d);
+        setApiLoad(false);
+        if (d.precios && d.precios.length) {
+          const latest = d.precios[d.precios.length - 1];
+          setV(prev => ({ ...prev, soja_hoy: latest.soja }));
+        }
+      })
       .catch(() => { setApiErr("No se pudo cargar la planilla."); setApiLoad(false); });
   }, [auth]);
 
