@@ -6,6 +6,7 @@
   <title>Soja vs Dólar — Decisión mensual</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/chart.js@4/dist/chart.umd.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #0c0e14; color: #d4dae8; font-family: system-ui, -apple-system, sans-serif; }
@@ -20,7 +21,7 @@
 <body>
 <div id="root"></div>
 <script>
-const { useState, useEffect, createElement: h } = React;
+const { useState, useEffect, useRef, createElement: h } = React;
 
 const PASS_HASH = "7dca3a2295651cd47867174d10fd26f1c0f6b0bc09393552309c4c9a5fdbee94";
 
@@ -136,6 +137,102 @@ function NumInput({ label, value, onChange, unit, step }) {
     h("input", { type:"number", value, step, onChange: e => onChange(Number(e.target.value)),
       style: { width:"100%", background:"transparent", border:"none", outline:"none", color:"#e8edf5", fontSize:20, fontWeight:700, fontFamily:"inherit" } }),
     h("div", { style: { fontSize:12, color:"#2e3650", marginTop:3 } }, unit)
+  );
+}
+
+function PriceChart({ precios }) {
+  const canvasRef = useRef(null);
+  const chartRef  = useRef(null);
+
+  useEffect(() => {
+    if (!canvasRef.current || !precios || precios.length < 2) return;
+    if (chartRef.current) chartRef.current.destroy();
+
+    const labels = precios.map(p => p.mes);
+    const sojas  = precios.map(p => p.soja);
+    const dolars = precios.map(p => p.dolar);
+    const last   = precios.length - 1;
+
+    chartRef.current = new Chart(canvasRef.current, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Soja $/tn",
+            data: sojas,
+            yAxisID: "ySoja",
+            borderColor: "#22c55e",
+            backgroundColor: "rgba(34,197,94,0.08)",
+            borderWidth: 2.5,
+            pointRadius: sojas.map((_, i) => i === last ? 5 : 3),
+            pointBackgroundColor: sojas.map((_, i) => i === last ? "#22c55e" : "rgba(34,197,94,0.5)"),
+            pointBorderColor: "transparent",
+            tension: 0.35,
+            fill: true,
+          },
+          {
+            label: "Dólar Oficial $/USD",
+            data: dolars,
+            yAxisID: "yDolar",
+            borderColor: "#eab308",
+            backgroundColor: "rgba(234,179,8,0.06)",
+            borderWidth: 2.5,
+            pointRadius: dolars.map((_, i) => i === last ? 5 : 3),
+            pointBackgroundColor: dolars.map((_, i) => i === last ? "#eab308" : "rgba(234,179,8,0.5)"),
+            pointBorderColor: "transparent",
+            tension: 0.35,
+            fill: true,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: {
+            labels: { color: "#8a9ab8", font: { size: 11 }, boxWidth: 12, padding: 16 },
+          },
+          tooltip: {
+            backgroundColor: "#141722",
+            borderColor: "#1e2130",
+            borderWidth: 1,
+            titleColor: "#e8edf5",
+            bodyColor: "#8a9ab8",
+            padding: 10,
+            callbacks: {
+              label: ctx => "  " + ctx.dataset.label + ": $" + Number(ctx.parsed.y).toLocaleString("es-AR"),
+            },
+          },
+        },
+        scales: {
+          x: {
+            ticks: { color: "#4a5568", font: { size: 10 }, maxRotation: 45 },
+            grid: { color: "rgba(30,33,48,0.8)" },
+          },
+          ySoja: {
+            position: "left",
+            ticks: { color: "#22c55e", font: { size: 10 }, callback: v => "$" + (v/1000).toFixed(0) + "k" },
+            grid: { color: "rgba(30,33,48,0.8)" },
+          },
+          yDolar: {
+            position: "right",
+            ticks: { color: "#eab308", font: { size: 10 }, callback: v => "$" + (v/1000).toFixed(1) + "k" },
+            grid: { drawOnChartArea: false },
+          },
+        },
+      },
+    });
+
+    return () => { if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; } };
+  }, [precios]);
+
+  return h("div", { style: { background:"#141722", border:"1px solid #1e2130", borderRadius:12, padding:"16px 12px", marginBottom:16 } },
+    h("div", { style: { fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", color:"#3a4460", marginBottom:12 } },
+      "📈 Evolución histórica — tocá cualquier mes para ver valores"
+    ),
+    h("canvas", { ref: canvasRef, style: { maxHeight: 260 } })
   );
 }
 
@@ -384,11 +481,12 @@ function App() {
 
   // Sub-tab: Precios históricos
   const subPrecios = apiLoad ? loadingEl : apiErr ? errorEl : h("div", null,
+    h(PriceChart, { precios }),
     h("div", { style: { overflowX:"auto" } },
       h("table", { style: { width:"100%", borderCollapse:"collapse" } },
         h("thead", null,
           h("tr", null,
-            ...["Mes", "Dólar Blue", "Soja $/tn"].map((lbl,i) =>
+            ...["Mes", "Dólar Oficial", "Soja $/tn"].map((lbl,i) =>
               h("th", { key:i, style: { ...thStyle, textAlign: i===0 ? "left" : "right" } }, lbl)
             )
           )
