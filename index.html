@@ -155,7 +155,13 @@ function App() {
   useEffect(() => {
     fetch("prices.json?t=" + Date.now())
       .then(r => r.json())
-      .then(d => { if (d.soja) setV(prev => ({ ...prev, soja_hoy: d.soja })); })
+      .then(d => {
+        setV(prev => ({
+          ...prev,
+          ...(d.soja  ? { soja_hoy:  d.soja  } : {}),
+          ...(d.dolar ? { dolar_hoy: d.dolar } : {}),
+        }));
+      })
       .catch(() => {});
   }, []);
 
