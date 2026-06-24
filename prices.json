@@ -1,7 +1,7 @@
 {
   "soja": 470000,
   "dolar": 1490,
-  "fecha": "2026-06-23",
+  "fecha": "2026-06-24",
   "fuentes": {
     "soja": "https://www.cac.bcr.com.ar/es/precios-de-pizarra",
     "dolar": "https://dolarapi.com/v1/dolares/oficial (Dólar Oficial BCRA)"
