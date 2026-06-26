@@ -148,10 +148,12 @@ function PriceChart({ precios }) {
     if (!canvasRef.current || !precios || precios.length < 2) return;
     if (chartRef.current) chartRef.current.destroy();
 
-    const labels = precios.map(p => p.mes);
+    const daily  = precios.some(p => p.fecha);
+    const labels = precios.map(p => p.fecha ? p.fecha.slice(8,10) + "/" + p.fecha.slice(5,7) : p.mes);
     const sojas  = precios.map(p => p.soja);
     const dolars = precios.map(p => p.dolar);
     const last   = precios.length - 1;
+    const lastSoja = sojas.reduce((acc, v, i) => v != null ? i : acc, -1);
 
     chartRef.current = new Chart(canvasRef.current, {
       type: "line",
@@ -165,11 +167,12 @@ function PriceChart({ precios }) {
             borderColor: "#22c55e",
             backgroundColor: "rgba(34,197,94,0.08)",
             borderWidth: 2.5,
-            pointRadius: sojas.map((_, i) => i === last ? 5 : 3),
-            pointBackgroundColor: sojas.map((_, i) => i === last ? "#22c55e" : "rgba(34,197,94,0.5)"),
+            pointRadius: sojas.map((_, i) => i === lastSoja ? 5 : (daily ? 0 : 3)),
+            pointBackgroundColor: sojas.map((_, i) => i === lastSoja ? "#22c55e" : "rgba(34,197,94,0.5)"),
             pointBorderColor: "transparent",
-            tension: 0.35,
-            fill: true,
+            tension: daily ? 0.1 : 0.35,
+            spanGaps: true,
+            fill: !daily,
           },
           {
             label: "Dólar Oficial $/USD",
@@ -178,11 +181,12 @@ function PriceChart({ precios }) {
             borderColor: "#eab308",
             backgroundColor: "rgba(234,179,8,0.06)",
             borderWidth: 2.5,
-            pointRadius: dolars.map((_, i) => i === last ? 5 : 3),
+            pointRadius: dolars.map((_, i) => i === last ? 5 : (daily ? 0 : 3)),
             pointBackgroundColor: dolars.map((_, i) => i === last ? "#eab308" : "rgba(234,179,8,0.5)"),
             pointBorderColor: "transparent",
-            tension: 0.35,
-            fill: true,
+            tension: daily ? 0.1 : 0.35,
+            spanGaps: true,
+            fill: !daily,
           },
         ],
       },
@@ -208,7 +212,7 @@ function PriceChart({ precios }) {
         },
         scales: {
           x: {
-            ticks: { color: "#4a5568", font: { size: 10 }, maxRotation: 45 },
+            ticks: { color: "#4a5568", font: { size: 10 }, maxRotation: 45, autoSkip: true, maxTicksLimit: 10 },
             grid: { color: "rgba(30,33,48,0.8)" },
           },
           ySoja: {
@@ -230,7 +234,7 @@ function PriceChart({ precios }) {
 
   return h("div", { style: { background:"#141722", border:"1px solid #1e2130", borderRadius:12, padding:"16px 12px", marginBottom:16 } },
     h("div", { style: { fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", color:"#3a4460", marginBottom:12 } },
-      "📈 Evolución histórica — tocá cualquier mes para ver valores"
+      "📈 Evolución diaria — pasá el dedo para ver valores"
     ),
     h("canvas", { ref: canvasRef, style: { maxHeight: 260 } })
   );
@@ -248,6 +252,7 @@ function App() {
   const [apiData, setApiData] = useState(null);
   const [apiLoad, setApiLoad] = useState(false);
   const [apiErr,  setApiErr]  = useState(null);
+  const [priceHist, setPriceHist] = useState([]);
 
   useEffect(() => {
     fetch("prices.json?t=" + Date.now())
@@ -258,6 +263,7 @@ function App() {
           ...(d.soja  ? { soja_hoy:  d.soja  } : {}),
           ...(d.dolar ? { dolar_hoy: d.dolar } : {}),
         }));
+        if (Array.isArray(d.history)) setPriceHist(d.history);
       })
       .catch(() => {});
   }, []);
@@ -481,7 +487,7 @@ function App() {
 
   // Sub-tab: Precios históricos
   const subPrecios = apiLoad ? loadingEl : apiErr ? errorEl : h("div", null,
-    h(PriceChart, { precios }),
+    h(PriceChart, { precios: priceHist.length ? priceHist : precios }),
     h("div", { style: { overflowX:"auto" } },
       h("table", { style: { width:"100%", borderCollapse:"collapse" } },
         h("thead", null,
@@ -592,7 +598,7 @@ function App() {
       h("span", { style: { fontSize:34 } }, "🌾"),
       h("div", null,
         h("div", { style: { fontSize:18, fontWeight:800, color:"#e8edf5", letterSpacing:"-0.01em" } }, "SOJA vs DÓLAR"),
-        h("div", { style: { fontSize:12, color:"#2e3650", marginTop:2 } }, "Pizarra BCR Rosario · Dólar Oficial · Decisión mensual")
+        h("div", { style: { fontSize:12, color:"#2e3650", marginTop:2 } }, "Pizarra BCR Rosario · Dólar Oficial · Datos diarios")
       )
     ),
     // Tabs
