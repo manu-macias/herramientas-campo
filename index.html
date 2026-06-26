@@ -139,6 +139,66 @@ function NumInput({ label, value, onChange, unit, step }) {
   );
 }
 
+// Parser de "MES AÑO" (ej. "JUN 2026") → fecha ISO a mitad de mes.
+const MES_NUM = { ENE:0, FEB:1, MAR:2, ABR:3, MAY:4, JUN:5, JUL:6, AGO:7, SEP:8, OCT:9, NOV:10, DIC:11 };
+function mesToFecha(mes) {
+  const m = String(mes).trim().toUpperCase().match(/([A-Z]{3})\s*(\d{4})/);
+  if (!m || MES_NUM[m[1]] == null) return null;
+  return `${m[2]}-${String(MES_NUM[m[1]] + 1).padStart(2, "0")}-15`;
+}
+
+// Gráfico de líneas (SVG, sin dependencias). Doble eje: soja $/tn (verde) y dólar $/USD (amarillo).
+function Chart({ dolar, soja }) {
+  const W = 700, H = 280, L = 8, R = 8, T = 16, B = 26;
+  const series = [dolar, soja].filter(s => s && s.length > 1);
+  if (series.length === 0) return h("div", { style: { fontSize:13, color:"#3a4460", textAlign:"center", padding:"40px 0" } }, "Sin datos suficientes para el gráfico.");
+
+  const ts = (f) => Date.parse(f);
+  const allDates = series.flat().map(p => ts(p.fecha));
+  const x0 = Math.min(...allDates), x1 = Math.max(...allDates);
+  const sx = (f) => L + ((ts(f) - x0) / (x1 - x0 || 1)) * (W - L - R);
+
+  const scaleY = (arr) => {
+    const vs = arr.map(p => p.valor);
+    let lo = Math.min(...vs), hi = Math.max(...vs);
+    const pad = (hi - lo) * 0.12 || hi * 0.1;
+    lo -= pad; hi += pad;
+    return (v) => T + (1 - (v - lo) / (hi - lo || 1)) * (H - T - B);
+  };
+  const path = (arr, sy) => arr.map((p, i) => (i ? "L" : "M") + sx(p.fecha).toFixed(1) + " " + sy(p.valor).toFixed(1)).join(" ");
+
+  const syS = soja && soja.length ? scaleY(soja) : null;
+  const syD = dolar && dolar.length ? scaleY(dolar) : null;
+
+  const months = []; const seen = new Set();
+  series.flat().sort((a,b)=>ts(a.fecha)-ts(b.fecha)).forEach(p => {
+    const k = p.fecha.slice(0,7);
+    if (!seen.has(k)) { seen.add(k); months.push(p.fecha); }
+  });
+  const MM = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  const lastS = soja && soja.length ? soja[soja.length-1] : null;
+  const lastD = dolar && dolar.length ? dolar[dolar.length-1] : null;
+
+  return h("div", null,
+    h("div", { style: { display:"flex", gap:16, justifyContent:"center", marginBottom:8, fontSize:12, fontWeight:700 } },
+      h("span", { style: { color:"#22c55e" } }, "● Soja $/tn"),
+      h("span", { style: { color:"#eab308" } }, "● Dólar MEP $/USD")
+    ),
+    h("svg", { viewBox:`0 0 ${W} ${H}`, style: { width:"100%", height:"auto", display:"block" }, preserveAspectRatio:"none" },
+      ...[0.25,0.5,0.75].map((g,i) => h("line", { key:"g"+i, x1:L, x2:W-R, y1:T+g*(H-T-B), y2:T+g*(H-T-B), stroke:"#1a1e2e", strokeWidth:1 })),
+      ...months.map((f,i) => h("text", { key:"m"+i, x:sx(f), y:H-8, fill:"#3a4460", fontSize:9, textAnchor:"middle" }, MM[new Date(f).getMonth()])),
+      syD ? h("path", { d:path(dolar, syD), fill:"none", stroke:"#eab308", strokeWidth:1.6, strokeLinejoin:"round", strokeLinecap:"round" }) : null,
+      syS ? h("path", { d:path(soja, syS), fill:"none", stroke:"#22c55e", strokeWidth:1.8, strokeLinejoin:"round", strokeLinecap:"round" }) : null,
+      lastD && syD ? h("circle", { cx:sx(lastD.fecha), cy:syD(lastD.valor), r:3, fill:"#eab308" }) : null,
+      lastS && syS ? h("circle", { cx:sx(lastS.fecha), cy:syS(lastS.valor), r:3, fill:"#22c55e" }) : null
+    ),
+    h("div", { style: { display:"flex", justifyContent:"space-between", marginTop:6, fontSize:12 } },
+      lastS ? h("span", { style: { color:"#22c55e", fontWeight:700 } }, "Soja $"+Number(lastS.valor).toLocaleString("es-AR")+"/tn") : h("span"),
+      lastD ? h("span", { style: { color:"#eab308", fontWeight:700 } }, "Dólar $"+Number(lastD.valor).toLocaleString("es-AR")) : h("span")
+    )
+  );
+}
+
 function App() {
   const [auth, setAuth]       = useState(() => sessionStorage.getItem("auth") === "1");
   const [tab, setTab]         = useState(0);
@@ -151,6 +211,7 @@ function App() {
   const [apiData, setApiData] = useState(null);
   const [apiLoad, setApiLoad] = useState(false);
   const [apiErr,  setApiErr]  = useState(null);
+  const [dolarDiario, setDolarDiario] = useState(null);
 
   useEffect(() => {
     if (!auth) return;
@@ -159,6 +220,25 @@ function App() {
       .then(r => r.json())
       .then(d => { setApiData(d); setApiLoad(false); })
       .catch(() => { setApiErr("No se pudo cargar la planilla."); setApiLoad(false); });
+  }, [auth]);
+
+  // Dólar MEP diario en vivo (ArgentinaDatos, CORS libre). Últimos ~13 meses.
+  useEffect(() => {
+    if (!auth) return;
+    fetch("https://api.argentinadatos.com/v1/cotizaciones/dolares/bolsa")
+      .then(r => r.json())
+      .then(arr => {
+        const cutoff = new Date(Date.now() - 400 * 86400000).toISOString().slice(0, 10);
+        const serie = arr
+          .filter(d => d.fecha >= cutoff && d.venta)
+          .map(d => ({ fecha: d.fecha, valor: Math.round(d.venta) }))
+          .sort((a, b) => a.fecha.localeCompare(b.fecha));
+        setDolarDiario(serie);
+        // Autocompleta el dólar de hoy con el último valor real.
+        const last = serie[serie.length - 1];
+        if (last) setV(prev => ({ ...prev, dolar_hoy: last.valor }));
+      })
+      .catch(() => {}); // si falla, el gráfico usa el dólar mensual de la planilla
   }, [auth]);
 
   if (!auth) return h(Login, { onSuccess: () => setAuth(true) });
@@ -367,12 +447,23 @@ function App() {
   );
 
   // Sub-tab: Precios históricos
+  const sojaSerie = precios.map(p => ({ fecha: mesToFecha(p.mes), valor: p.soja })).filter(p => p.fecha);
+  const dolarSerie = (dolarDiario && dolarDiario.length)
+    ? dolarDiario
+    : precios.map(p => ({ fecha: mesToFecha(p.mes), valor: p.dolar })).filter(p => p.fecha);
   const subPrecios = apiLoad ? loadingEl : apiErr ? errorEl : h("div", null,
+    h("div", { style: { ...S.card, marginBottom:14 } },
+      h("div", { style: { display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:10 } },
+        h("div", { style: { fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.07em", color:"#3a4460" } }, "📈 Evolución"),
+        h("div", { style: { fontSize:10, color:"#2e3650" } }, (dolarDiario && dolarDiario.length) ? "Dólar diario en vivo · soja de la planilla" : "Soja y dólar de la planilla")
+      ),
+      h(Chart, { dolar: dolarSerie, soja: sojaSerie })
+    ),
     h("div", { style: { overflowX:"auto" } },
       h("table", { style: { width:"100%", borderCollapse:"collapse" } },
         h("thead", null,
           h("tr", null,
-            ...["Mes", "Dólar Blue", "Soja $/tn"].map((lbl,i) =>
+            ...["Mes", "Dólar MEP", "Soja $/tn"].map((lbl,i) =>
               h("th", { key:i, style: { ...thStyle, textAlign: i===0 ? "left" : "right" } }, lbl)
             )
           )
