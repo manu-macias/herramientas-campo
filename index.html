@@ -40,6 +40,9 @@ function Login({ onSuccess }) {
     const h2 = await hashStr(pwd);
     if (h2 === PASS_HASH) {
       sessionStorage.setItem("auth", "1");
+      // Guardamos la contraseña en la sesión (per-tab) para autorizar escrituras.
+      // El Apps Script la valida server-side; en el código público solo está su hash.
+      sessionStorage.setItem("pw", pwd);
       onSuccess();
     } else {
       setError(true);
@@ -253,6 +256,40 @@ function App() {
   const [apiLoad, setApiLoad] = useState(false);
   const [apiErr,  setApiErr]  = useState(null);
   const [priceHist, setPriceHist] = useState([]);
+  const [vForm, setVForm]   = useState({ socio:"", mes:"", tn:"" });
+  const [vSaving, setVSaving] = useState(false);
+  const [vMsg, setVMsg]     = useState(null);
+
+  const registrarVenta = async () => {
+    const tn = Number(vForm.tn);
+    if (!vForm.socio || !vForm.mes || !tn || tn <= 0) {
+      setVMsg({ ok:false, txt:"Completá socio, mes y toneladas (> 0)." });
+      return;
+    }
+    setVSaving(true); setVMsg(null);
+    try {
+      // POST como "simple request" (body string → Content-Type text/plain) para
+      // evitar el preflight CORS, que Apps Script no maneja.
+      const res = await fetch(API_URL, {
+        method: "POST",
+        redirect: "follow",
+        body: JSON.stringify({
+          op: "registrar_venta",
+          secret: sessionStorage.getItem("pw") || "",
+          socio: vForm.socio, mes: vForm.mes, tn,
+        }),
+      });
+      const data = await res.json();
+      if (data && data.error) throw new Error(data.error);
+      setApiData(data);
+      setVMsg({ ok:true, txt:`✓ Registradas ${tn} tn de ${vForm.socio} en ${vForm.mes}.` });
+      setVForm({ socio:"", mes:"", tn:"" });
+    } catch (e) {
+      setVMsg({ ok:false, txt:"No se pudo registrar: " + e.message });
+    } finally {
+      setVSaving(false);
+    }
+  };
 
   useEffect(() => {
     fetch("prices.json?t=" + Date.now())
@@ -439,7 +476,30 @@ function App() {
   const errorEl   = h("div", { style: { textAlign:"center", color:"#ef4444", padding:32, fontSize:13 } }, apiErr);
 
   // Sub-tab: Ventas por socio
+  const inputBase = { width:"100%", background:"#0c0e14", border:"1px solid #1e2130", borderRadius:8, color:"#e8edf5", fontSize:14, fontFamily:"inherit", padding:"9px 10px", outline:"none" };
+  const formVenta = h("div", { style: { ...S.card, marginBottom:14 } },
+    h("div", { style: { fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.07em", color:"#3a4460", marginBottom:10 } }, "➕ Registrar venta"),
+    h("div", { style: { display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:10 } },
+      h("select", { value:vForm.socio, onChange:e => setVForm(p => ({ ...p, socio:e.target.value })), style: inputBase },
+        h("option", { value:"" }, "Socio"),
+        ...ventas.map((r,i) => h("option", { key:i, value:r.nombre }, r.nombre))
+      ),
+      h("select", { value:vForm.mes, onChange:e => setVForm(p => ({ ...p, mes:e.target.value })), style: inputBase },
+        h("option", { value:"" }, "Mes"),
+        ...MESES_CAMP.map((m,i) => h("option", { key:i, value:m }, m))
+      ),
+      h("input", { type:"number", inputMode:"decimal", step:"0.5", min:"0", placeholder:"Toneladas",
+        value:vForm.tn, onChange:e => setVForm(p => ({ ...p, tn:e.target.value })), style: inputBase })
+    ),
+    h("button", { onClick:registrarVenta, disabled:vSaving,
+      style: { width:"100%", padding:11, background: vSaving ? "#1a2040" : "#22c55e", border:"none", borderRadius:9, color: vSaving ? "#3a4460" : "#06210f", fontSize:14, fontWeight:800, cursor: vSaving ? "default" : "pointer" } },
+      vSaving ? "Guardando…" : "Registrar venta"
+    ),
+    vMsg && h("div", { style: { marginTop:10, fontSize:12, fontWeight:600, color: vMsg.ok ? "#22c55e" : "#ef4444" } }, vMsg.txt)
+  );
+
   const subVentas = apiLoad ? loadingEl : apiErr ? errorEl : h("div", null,
+    formVenta,
     h("div", { style: { fontSize:10, color:"#3a4460", marginBottom:10, lineHeight:1.6 } },
       "Campaña 2026-2027 · Stock inicial 12 tn/socio · Precio actual: $" + FMT(precioActual) + "/tn · Actualizado: " + (apiData ? new Date(apiData.actualizado).toLocaleDateString("es-AR") : "")
     ),
