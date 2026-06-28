@@ -260,30 +260,48 @@ function App() {
   const [vSaving, setVSaving] = useState(false);
   const [vMsg, setVMsg]     = useState(null);
 
+  // Lee el valor actual de una celda socio×mes desde los datos de la API.
+  const cellVenta = (data, socio, mes) => {
+    if (!data || !data.ventas) return 0;
+    const row = data.ventas.find(r => r.nombre === socio);
+    const mi  = MESES_CAMP.indexOf(mes);
+    return row && mi >= 0 ? (Number(row.ventas[mi]) || 0) : 0;
+  };
+
   const registrarVenta = async () => {
     const tn = Number(vForm.tn);
     if (!vForm.socio || !vForm.mes || !tn || tn <= 0) {
       setVMsg({ ok:false, txt:"Completá socio, mes y toneladas (> 0)." });
       return;
     }
+    const before = cellVenta(apiData, vForm.socio, vForm.mes);
     setVSaving(true); setVMsg(null);
     try {
-      // POST como "simple request" (body string → Content-Type text/plain) para
-      // evitar el preflight CORS, que Apps Script no maneja.
-      const res = await fetch(API_URL, {
-        method: "POST",
-        redirect: "follow",
+      // Apps Script no permite LEER respuestas POST cross-origin (CORS). Por eso
+      // posteamos en modo no-cors (la contraseña viaja en el body, no en la URL)
+      // y confirmamos releyendo la planilla por GET, comparando antes/después.
+      await fetch(API_URL, {
+        method: "POST", mode: "no-cors", redirect: "follow",
         body: JSON.stringify({
           op: "registrar_venta",
           secret: sessionStorage.getItem("pw") || "",
           socio: vForm.socio, mes: vForm.mes, tn,
         }),
       });
-      const data = await res.json();
-      if (data && data.error) throw new Error(data.error);
-      setApiData(data);
-      setVMsg({ ok:true, txt:`✓ Registradas ${tn} tn de ${vForm.socio} en ${vForm.mes}.` });
-      setVForm({ socio:"", mes:"", tn:"" });
+      // Releemos hasta 3 veces (la escritura puede tardar en propagarse).
+      let fresh = apiData, after = before;
+      for (let i = 0; i < 3 && !(after > before + 0.001); i++) {
+        await new Promise(r => setTimeout(r, i === 0 ? 500 : 700));
+        fresh = await fetch(API_URL + "&_=" + Date.now()).then(r => r.json());
+        after = cellVenta(fresh, vForm.socio, vForm.mes);
+      }
+      setApiData(fresh);
+      if (after > before + 0.001) {
+        setVMsg({ ok:true, txt:`✓ Registradas ${tn} tn de ${vForm.socio} en ${vForm.mes}.` });
+        setVForm({ socio:"", mes:"", tn:"" });
+      } else {
+        setVMsg({ ok:false, txt:"No se registró. Verificá la contraseña: cerrá sesión y volvé a entrar." });
+      }
     } catch (e) {
       setVMsg({ ok:false, txt:"No se pudo registrar: " + e.message });
     } finally {
