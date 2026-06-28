@@ -164,15 +164,15 @@ function NumInput({ label, value, onChange, unit, step, icon, accent }) {
     h("div", { style:{ display:"flex", alignItems:"center", gap:7, fontSize:12.5, fontWeight:500, color:T.text3, marginBottom:7 } },
       icon ? ic(icon, 15, accent || T.text3) : null, h("span", null, label)
     ),
-    h("div", { style:{ display:"flex", alignItems:"center", gap:8 } },
-      h("input", { type:"number", value, step:st, onChange: e => onChange(Number(e.target.value)),
-        style:{ flex:1, minWidth:0, background:"transparent", border:"none", outline:"none", color:T.text, fontSize:21, fontWeight:700, fontFamily:"inherit" } }),
-      h("div", { style:{ display:"flex", gap:6 } },
+    h("input", { type:"number", value, step:st, onChange: e => onChange(Number(e.target.value)),
+      style:{ width:"100%", background:"transparent", border:"none", outline:"none", color:T.text, fontSize:21, fontWeight:700, fontFamily:"inherit", marginBottom:7 } }),
+    h("div", { style:{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 } },
+      h("div", { style:{ fontSize:11.5, color:T.faint, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" } }, unit),
+      h("div", { style:{ display:"flex", gap:6, flexShrink:0 } },
         stepBtn("minus", () => onChange(Number((value - st).toFixed(2)))),
         stepBtn("plus",  () => onChange(Number((value + st).toFixed(2))))
       )
-    ),
-    h("div", { style:{ fontSize:11.5, color:T.faint, marginTop:4 } }, unit)
+    )
   );
 }
 
@@ -352,15 +352,15 @@ function App() {
 
   const S = {
     page:  { maxWidth:520, margin:"0 auto", minHeight:"100vh", padding:"20px 16px 48px" },
-    grid2: { display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 },
+    grid2: { display:"grid", gridTemplateColumns:"minmax(0, 1fr) minmax(0, 1fr)", gap:10 },
     card:  { background:T.surface, border:`1px solid ${T.border}`, borderRadius:T.rs, padding:"13px 14px" },
   };
 
   const tabDecision = h("div", null,
     h(SecLabel, null, "Precios de hoy"),
     h("div", { style: S.grid2 },
-      h(NumInput, { label:"Soja BCR Rosario", value:v.soja_hoy,  onChange:set("soja_hoy"),  unit:"$/tn · pizarra", step:1000, icon:"plant-2", accent:T.soja }),
-      h(NumInput, { label:"Dólar oficial",     value:v.dolar_hoy, onChange:set("dolar_hoy"), unit:"$/USD · venta BCRA", step:10, icon:"currency-dollar", accent:T.dolar })
+      h(NumInput, { label:"Soja BCR Rosario", value:v.soja_hoy,  onChange:set("soja_hoy"),  unit:"$/tn", step:1000, icon:"plant-2", accent:T.soja }),
+      h(NumInput, { label:"Dólar oficial",     value:v.dolar_hoy, onChange:set("dolar_hoy"), unit:"$/USD", step:10, icon:"currency-dollar", accent:T.dolar })
     ),
     h(SecLabel, null, "Promedios de referencia (últimos 3 meses)"),
     h("div", { style: S.grid2 },
@@ -380,7 +380,7 @@ function App() {
       )
     ),
     h(SecLabel, null, "Señales"),
-    h("div", { style:{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10, marginBottom:12 } },
+    h("div", { style:{ display:"grid", gridTemplateColumns:"repeat(3, minmax(0, 1fr))", gap:10, marginBottom:12 } },
       ...[
         { val:PCT(soja_rel),  lbl:"Soja vs prom.",  col: soja_rel  >= 0 ? T.soja : T.red },
         { val:PCT(dolar_rel), lbl:"Dólar vs prom.", col: dolar_rel >= 0 ? T.soja : T.red },
@@ -473,7 +473,7 @@ function App() {
   const inputBase = { width:"100%", background:T.bg, border:`1px solid ${T.border}`, borderRadius:9, color:T.text, fontSize:14, fontFamily:"inherit", padding:"10px 11px", outline:"none" };
   const formVenta = h("div", { style:{ ...S.card, marginBottom:14 } },
     h("div", { style:{ display:"flex", alignItems:"center", gap:7, fontSize:12.5, fontWeight:600, color:T.text2, marginBottom:11 } }, ic("plus", 16, T.soja), h("span", null, "Registrar venta")),
-    h("div", { style:{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:10 } },
+    h("div", { style:{ display:"grid", gridTemplateColumns:"repeat(3, minmax(0, 1fr))", gap:8, marginBottom:10 } },
       h("select", { value:vForm.socio, onChange:e => setVForm(p => ({ ...p, socio:e.target.value })), style: inputBase },
         h("option", { value:"" }, "Socio"),
         ...ventas.map((r,i) => h("option", { key:i, value:r.nombre }, r.nombre))
