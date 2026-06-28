@@ -20,9 +20,10 @@ function doGet(e) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("VENTAS");
   const rows = sheet.getDataRange().getValues();
   return json({
-    version:     "ventas-2",          // marca para verificar que el deploy tomó el código nuevo
+    version:     "ventas-3",          // marca para verificar que el deploy tomó el código nuevo
     ventas:      parseVentas(rows),
     precios:     parsePrecios(rows),
+    facturado:   parseFacturacion(),  // { total, ultimoMes:{mes,importe}, porMes }
     actualizado: new Date().toISOString()
   });
 }
@@ -84,11 +85,25 @@ function doPost(e) {
       }
       SpreadsheetApp.flush();
 
+      // Registro de facturación: guardamos el PRECIO de soja del día en que se
+      // registra la venta, así la facturación queda exacta aunque el precio
+      // cambie después. El cliente manda el precio que está viendo (prices.json).
+      const precio  = parsNum(body.precio);
+      if (precio > 0) {
+        const importe = redondear(tn * precio);
+        const fsh = facturacionSheet();
+        const now = new Date();
+        const fecha = Utilities.formatDate(now, "America/Argentina/Buenos_Aires", "yyyy-MM-dd");
+        fsh.appendRow([now.toISOString(), fecha, socio, mes, tn, precio, importe]);
+        SpreadsheetApp.flush();
+      }
+
       const fresh = sheet.getDataRange().getValues();
       return json({
         ok: true,
         ventas:      parseVentas(fresh),
         precios:     parsePrecios(fresh),
+        facturado:   parseFacturacion(),
         actualizado: new Date().toISOString()
       });
     } finally {
@@ -154,4 +169,78 @@ function parsNum(v) {
   if (v === "" || v === null || v === undefined) return 0;
   if (typeof v === "number") return v;
   return Number(String(v).replace(/[$\s]/g,"").replace(/\./g,"").replace(",",".")) || 0;
+}
+
+// ============================================================================
+//  FACTURACIÓN — log de ventas con el precio capturado en el momento.
+//  Hoja "FACTURACION": timestamp | fecha | socio | mes | tn | precio_soja | importe
+// ============================================================================
+
+const CAMP_START_YEAR = 2026; // campaña JUN 2026 → MAY 2027
+
+function facturacionSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName("FACTURACION");
+  if (!sh) {
+    sh = ss.insertSheet("FACTURACION");
+    sh.appendRow(["timestamp", "fecha", "socio", "mes", "tn", "precio_soja", "importe"]);
+  }
+  return sh;
+}
+
+// Suma la facturación del log: total + por mes + último mes con ventas.
+function parseFacturacion() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName("FACTURACION");
+  if (!sh || sh.getLastRow() < 2) return { total: 0, ultimoMes: null, porMes: {} };
+  const rows = sh.getDataRange().getValues();
+  let total = 0;
+  const porMes = {};
+  for (let i = 1; i < rows.length; i++) { // salteamos el encabezado
+    const mes     = String(rows[i][3] || "").trim().toUpperCase();
+    const importe = parsNum(rows[i][6]);
+    if (!importe) continue;
+    total += importe;
+    porMes[mes] = (porMes[mes] || 0) + importe;
+  }
+  // "último mes" = el mes más avanzado de la campaña que tenga facturación.
+  let ultimoMes = null;
+  for (let mi = MESES_CAMP.length - 1; mi >= 0; mi--) {
+    const m = MESES_CAMP[mi];
+    if (porMes[m]) { ultimoMes = { mes: m, importe: redondear(porMes[m]) }; break; }
+  }
+  return { total: redondear(total), ultimoMes, porMes };
+}
+
+// Backfill OPCIONAL para las ventas ya cargadas (que no tienen precio guardado).
+// Usa el precio MENSUAL de la tabla de precios — es lo mejor disponible para el
+// histórico, ya que no se capturó el precio exacto del día. Corré esto UNA vez
+// desde el editor (Ejecutar → backfillFacturacion). Reescribe todo el log.
+function backfillFacturacion() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const rows = ss.getSheetByName("VENTAS").getDataRange().getValues();
+  const ventas  = parseVentas(rows);
+  const precios = parsePrecios(rows);
+  const priceByKey = {};
+  precios.forEach(p => { priceByKey[p.mes] = p.soja; });
+  // Fallback: si un mes todavía no tiene precio mensual (ej. meses futuros),
+  // usamos el último precio mensual conocido en vez de valuar a $0.
+  const ultimoPrecio = precios.length ? precios[precios.length - 1].soja : 0;
+
+  const fsh = facturacionSheet();
+  if (fsh.getLastRow() > 1) fsh.deleteRows(2, fsh.getLastRow() - 1); // limpia, deja header
+  const stamp = new Date().toISOString();
+  let n = 0;
+  ventas.forEach(v => {
+    if (v.nombre === "TOTAL") return;
+    v.ventas.forEach((tn, mi) => {
+      if (!(tn > 0)) return;
+      const mes   = MESES_CAMP[mi];
+      const year  = CAMP_START_YEAR + (mi >= 7 ? 1 : 0); // ENE..MAY son del año siguiente
+      const precio = priceByKey[mes + " " + year] || ultimoPrecio;
+      fsh.appendRow([stamp, "backfill", v.nombre, mes, tn, precio, redondear(tn * precio)]);
+      n++;
+    });
+  });
+  Logger.log("Backfill listo: " + n + " filas.");
 }

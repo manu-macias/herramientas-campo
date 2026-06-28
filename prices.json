@@ -1,22 +1,12 @@
 {
   "soja": 480000,
   "dolar": 1495,
-  "fecha": "2026-06-26",
+  "fecha": "2026-06-28",
   "fuentes": {
-    "soja": "https://www.cac.bcr.com.ar/es/precios-de-pizarra",
+    "soja": "https://api.bcr.com.ar/gix/v1.0/PreciosCamara (Cámara Arbitral BCR, serie diaria) · fallback: scrape pizarra",
     "dolar": "https://dolarapi.com/v1/dolares/oficial (Dólar Oficial BCRA) · historia: ArgentinaDatos"
   },
   "history": [
-    {
-      "fecha": "2025-05-22",
-      "soja": null,
-      "dolar": 1155
-    },
-    {
-      "fecha": "2025-05-23",
-      "soja": null,
-      "dolar": 1150
-    },
     {
       "fecha": "2025-05-24",
       "soja": null,
@@ -29,27 +19,27 @@
     },
     {
       "fecha": "2025-05-26",
-      "soja": null,
+      "soja": 311000,
       "dolar": 1160
     },
     {
       "fecha": "2025-05-27",
-      "soja": null,
+      "soja": 314000,
       "dolar": 1170
     },
     {
       "fecha": "2025-05-28",
-      "soja": null,
+      "soja": 310000,
       "dolar": 1175
     },
     {
       "fecha": "2025-05-29",
-      "soja": null,
+      "soja": 317000,
       "dolar": 1195
     },
     {
       "fecha": "2025-05-30",
-      "soja": null,
+      "soja": 320000,
       "dolar": 1195
     },
     {
@@ -64,27 +54,27 @@
     },
     {
       "fecha": "2025-06-02",
-      "soja": null,
+      "soja": 320000,
       "dolar": 1200
     },
     {
       "fecha": "2025-06-03",
-      "soja": null,
+      "soja": 322500,
       "dolar": 1200
     },
     {
       "fecha": "2025-06-04",
-      "soja": null,
+      "soja": 323000,
       "dolar": 1200
     },
     {
       "fecha": "2025-06-05",
-      "soja": null,
+      "soja": 323500,
       "dolar": 1205
     },
     {
       "fecha": "2025-06-06",
-      "soja": null,
+      "soja": 321300,
       "dolar": 1200
     },
     {
@@ -99,27 +89,27 @@
     },
     {
       "fecha": "2025-06-09",
-      "soja": null,
+      "soja": 320000,
       "dolar": 1200
     },
     {
       "fecha": "2025-06-10",
-      "soja": null,
+      "soja": 320800,
       "dolar": 1200
     },
     {
       "fecha": "2025-06-11",
-      "soja": null,
+      "soja": 326000,
       "dolar": 1200
     },
     {
       "fecha": "2025-06-12",
-      "soja": null,
+      "soja": 323800,
       "dolar": 1200
     },
     {
       "fecha": "2025-06-13",
-      "soja": null,
+      "soja": 327000,
       "dolar": 1200
     },
     {
@@ -139,17 +129,17 @@
     },
     {
       "fecha": "2025-06-17",
-      "soja": null,
+      "soja": 326900,
       "dolar": 1185
     },
     {
       "fecha": "2025-06-18",
-      "soja": null,
+      "soja": 318200,
       "dolar": 1160
     },
     {
       "fecha": "2025-06-19",
-      "soja": null,
+      "soja": 319400,
       "dolar": 1180
     },
     {
@@ -169,27 +159,27 @@
     },
     {
       "fecha": "2025-06-23",
-      "soja": null,
+      "soja": 319500,
       "dolar": 1185
     },
     {
       "fecha": "2025-06-24",
-      "soja": null,
+      "soja": 323000,
       "dolar": 1195
     },
     {
       "fecha": "2025-06-25",
-      "soja": null,
+      "soja": 321000,
       "dolar": 1205
     },
     {
       "fecha": "2025-06-26",
-      "soja": null,
+      "soja": 321000,
       "dolar": 1205
     },
     {
       "fecha": "2025-06-27",
-      "soja": null,
+      "soja": 321000,
       "dolar": 1205
     },
     {
@@ -204,27 +194,27 @@
     },
     {
       "fecha": "2025-06-30",
-      "soja": null,
+      "soja": 321000,
       "dolar": 1215
     },
     {
       "fecha": "2025-07-01",
-      "soja": null,
+      "soja": 320000,
       "dolar": 1235
     },
     {
       "fecha": "2025-07-02",
-      "soja": null,
+      "soja": 315000,
       "dolar": 1245
     },
     {
       "fecha": "2025-07-03",
-      "soja": null,
+      "soja": 315000,
       "dolar": 1245
     },
     {
       "fecha": "2025-07-04",
-      "soja": null,
+      "soja": 315000,
       "dolar": 1260
     },
     {
@@ -239,12 +229,12 @@
     },
     {
       "fecha": "2025-07-07",
-      "soja": null,
+      "soja": 315000,
       "dolar": 1280
     },
     {
       "fecha": "2025-07-08",
-      "soja": null,
+      "soja": 315000,
       "dolar": 1275
     },
     {
@@ -254,12 +244,12 @@
     },
     {
       "fecha": "2025-07-10",
-      "soja": null,
+      "soja": 320000,
       "dolar": 1275
     },
     {
       "fecha": "2025-07-11",
-      "soja": null,
+      "soja": 323000,
       "dolar": 1275
     },
     {
@@ -274,27 +264,27 @@
     },
     {
       "fecha": "2025-07-14",
-      "soja": null,
+      "soja": 330000,
       "dolar": 1295
     },
     {
       "fecha": "2025-07-15",
-      "soja": 335000,
+      "soja": 330000,
       "dolar": 1280
     },
     {
       "fecha": "2025-07-16",
-      "soja": null,
+      "soja": 330000,
       "dolar": 1275
     },
     {
       "fecha": "2025-07-17",
-      "soja": null,
+      "soja": 335000,
       "dolar": 1290
     },
     {
       "fecha": "2025-07-18",
-      "soja": null,
+      "soja": 340000,
       "dolar": 1300
     },
     {
@@ -309,27 +299,27 @@
     },
     {
       "fecha": "2025-07-21",
-      "soja": null,
+      "soja": 338500,
       "dolar": 1300
     },
     {
       "fecha": "2025-07-22",
-      "soja": null,
+      "soja": 336000,
       "dolar": 1275
     },
     {
       "fecha": "2025-07-23",
-      "soja": null,
+      "soja": 340000,
       "dolar": 1275
     },
     {
       "fecha": "2025-07-24",
-      "soja": null,
+      "soja": 341500,
       "dolar": 1285
     },
     {
       "fecha": "2025-07-25",
-      "soja": null,
+      "soja": 345000,
       "dolar": 1295
     },
     {
@@ -344,27 +334,27 @@
     },
     {
       "fecha": "2025-07-28",
-      "soja": null,
+      "soja": 360000,
       "dolar": 1305
     },
     {
       "fecha": "2025-07-29",
-      "soja": null,
+      "soja": 365000,
       "dolar": 1300
     },
     {
       "fecha": "2025-07-30",
-      "soja": null,
+      "soja": 370000,
       "dolar": 1325
     },
     {
       "fecha": "2025-07-31",
-      "soja": null,
+      "soja": 385000,
       "dolar": 1380
     },
     {
       "fecha": "2025-08-01",
-      "soja": null,
+      "soja": 389000,
       "dolar": 1375
     },
     {
@@ -379,27 +369,27 @@
     },
     {
       "fecha": "2025-08-04",
-      "soja": null,
+      "soja": 395000,
       "dolar": 1370
     },
     {
       "fecha": "2025-08-05",
-      "soja": null,
+      "soja": 392000,
       "dolar": 1350
     },
     {
       "fecha": "2025-08-06",
-      "soja": null,
+      "soja": 390000,
       "dolar": 1345
     },
     {
       "fecha": "2025-08-07",
-      "soja": null,
+      "soja": 390300,
       "dolar": 1340
     },
     {
       "fecha": "2025-08-08",
-      "soja": null,
+      "soja": 390000,
       "dolar": 1335
     },
     {
@@ -414,22 +404,22 @@
     },
     {
       "fecha": "2025-08-11",
-      "soja": null,
+      "soja": 385000,
       "dolar": 1335
     },
     {
       "fecha": "2025-08-12",
-      "soja": null,
+      "soja": 390000,
       "dolar": 1330
     },
     {
       "fecha": "2025-08-13",
-      "soja": null,
+      "soja": 390000,
       "dolar": 1325
     },
     {
       "fecha": "2025-08-14",
-      "soja": null,
+      "soja": 384000,
       "dolar": 1310
     },
     {
@@ -449,27 +439,27 @@
     },
     {
       "fecha": "2025-08-18",
-      "soja": null,
+      "soja": 380000,
       "dolar": 1315
     },
     {
       "fecha": "2025-08-19",
-      "soja": null,
+      "soja": 380500,
       "dolar": 1310
     },
     {
       "fecha": "2025-08-20",
-      "soja": null,
+      "soja": 385000,
       "dolar": 1315
     },
     {
       "fecha": "2025-08-21",
-      "soja": null,
+      "soja": 390000,
       "dolar": 1325
     },
     {
       "fecha": "2025-08-22",
-      "soja": null,
+      "soja": 392000,
       "dolar": 1335
     },
     {
@@ -484,27 +474,27 @@
     },
     {
       "fecha": "2025-08-25",
-      "soja": null,
+      "soja": 400000,
       "dolar": 1370
     },
     {
       "fecha": "2025-08-26",
-      "soja": null,
+      "soja": 400000,
       "dolar": 1370
     },
     {
       "fecha": "2025-08-27",
-      "soja": null,
+      "soja": 394000,
       "dolar": 1360
     },
     {
       "fecha": "2025-08-28",
-      "soja": null,
+      "soja": 387000,
       "dolar": 1345
     },
     {
       "fecha": "2025-08-29",
-      "soja": null,
+      "soja": 389000,
       "dolar": 1360
     },
     {
@@ -519,27 +509,27 @@
     },
     {
       "fecha": "2025-09-01",
-      "soja": null,
+      "soja": 395000,
       "dolar": 1385
     },
     {
       "fecha": "2025-09-02",
-      "soja": null,
+      "soja": 400000,
       "dolar": 1375
     },
     {
       "fecha": "2025-09-03",
-      "soja": null,
+      "soja": 395000,
       "dolar": 1375
     },
     {
       "fecha": "2025-09-04",
-      "soja": null,
+      "soja": 400000,
       "dolar": 1375
     },
     {
       "fecha": "2025-09-05",
-      "soja": null,
+      "soja": 400000,
       "dolar": 1380
     },
     {
@@ -554,27 +544,27 @@
     },
     {
       "fecha": "2025-09-08",
-      "soja": null,
+      "soja": 410000,
       "dolar": 1425
     },
     {
       "fecha": "2025-09-09",
-      "soja": null,
+      "soja": 415000,
       "dolar": 1425
     },
     {
       "fecha": "2025-09-10",
-      "soja": null,
+      "soja": 420000,
       "dolar": 1435
     },
     {
       "fecha": "2025-09-11",
-      "soja": null,
+      "soja": 425000,
       "dolar": 1445
     },
     {
       "fecha": "2025-09-12",
-      "soja": null,
+      "soja": 435000,
       "dolar": 1465
     },
     {
@@ -589,27 +579,27 @@
     },
     {
       "fecha": "2025-09-15",
-      "soja": 436000,
+      "soja": 440000,
       "dolar": 1475
     },
     {
       "fecha": "2025-09-16",
-      "soja": null,
+      "soja": 440000,
       "dolar": 1480
     },
     {
       "fecha": "2025-09-17",
-      "soja": null,
+      "soja": 440000,
       "dolar": 1485
     },
     {
       "fecha": "2025-09-18",
-      "soja": null,
+      "soja": 440000,
       "dolar": 1495
     },
     {
       "fecha": "2025-09-19",
-      "soja": null,
+      "soja": 439800,
       "dolar": 1515
     },
     {
@@ -624,27 +614,27 @@
     },
     {
       "fecha": "2025-09-22",
-      "soja": null,
+      "soja": 505000,
       "dolar": 1430
     },
     {
       "fecha": "2025-09-23",
-      "soja": null,
+      "soja": 493000,
       "dolar": 1385
     },
     {
       "fecha": "2025-09-24",
-      "soja": null,
+      "soja": 461000,
       "dolar": 1360
     },
     {
       "fecha": "2025-09-25",
-      "soja": null,
+      "soja": 449500,
       "dolar": 1355
     },
     {
       "fecha": "2025-09-26",
-      "soja": null,
+      "soja": 453000,
       "dolar": 1350
     },
     {
@@ -659,27 +649,27 @@
     },
     {
       "fecha": "2025-09-29",
-      "soja": null,
+      "soja": 475000,
       "dolar": 1380
     },
     {
       "fecha": "2025-09-30",
-      "soja": null,
+      "soja": 480000,
       "dolar": 1400
     },
     {
       "fecha": "2025-10-01",
-      "soja": null,
+      "soja": 495000,
       "dolar": 1450
     },
     {
       "fecha": "2025-10-02",
-      "soja": null,
+      "soja": 499800,
       "dolar": 1450
     },
     {
       "fecha": "2025-10-03",
-      "soja": null,
+      "soja": 495000,
       "dolar": 1450
     },
     {
@@ -694,22 +684,22 @@
     },
     {
       "fecha": "2025-10-06",
-      "soja": null,
+      "soja": 495000,
       "dolar": 1455
     },
     {
       "fecha": "2025-10-07",
-      "soja": null,
+      "soja": 494600,
       "dolar": 1455
     },
     {
       "fecha": "2025-10-08",
-      "soja": null,
+      "soja": 494800,
       "dolar": 1455
     },
     {
       "fecha": "2025-10-09",
-      "soja": null,
+      "soja": 499500,
       "dolar": 1450
     },
     {
@@ -729,27 +719,27 @@
     },
     {
       "fecha": "2025-10-13",
-      "soja": null,
+      "soja": 464800,
       "dolar": 1375
     },
     {
       "fecha": "2025-10-14",
-      "soja": null,
+      "soja": 464000,
       "dolar": 1385
     },
     {
       "fecha": "2025-10-15",
-      "soja": 482000,
+      "soja": 470000,
       "dolar": 1405
     },
     {
       "fecha": "2025-10-16",
-      "soja": null,
+      "soja": 470000,
       "dolar": 1430
     },
     {
       "fecha": "2025-10-17",
-      "soja": null,
+      "soja": 480000,
       "dolar": 1475
     },
     {
@@ -764,27 +754,27 @@
     },
     {
       "fecha": "2025-10-20",
-      "soja": null,
+      "soja": 475000,
       "dolar": 1495
     },
     {
       "fecha": "2025-10-21",
-      "soja": null,
+      "soja": 480000,
       "dolar": 1515
     },
     {
       "fecha": "2025-10-22",
-      "soja": null,
+      "soja": 480000,
       "dolar": 1515
     },
     {
       "fecha": "2025-10-23",
-      "soja": null,
+      "soja": 480000,
       "dolar": 1505
     },
     {
       "fecha": "2025-10-24",
-      "soja": null,
+      "soja": 480000,
       "dolar": 1515
     },
     {
@@ -799,27 +789,27 @@
     },
     {
       "fecha": "2025-10-27",
-      "soja": null,
+      "soja": 480000,
       "dolar": 1460
     },
     {
       "fecha": "2025-10-28",
-      "soja": null,
+      "soja": 490000,
       "dolar": 1495
     },
     {
       "fecha": "2025-10-29",
-      "soja": null,
+      "soja": 481000,
       "dolar": 1460
     },
     {
       "fecha": "2025-10-30",
-      "soja": null,
+      "soja": 475000,
       "dolar": 1465
     },
     {
       "fecha": "2025-10-31",
-      "soja": null,
+      "soja": 480000,
       "dolar": 1475
     },
     {
@@ -834,27 +824,27 @@
     },
     {
       "fecha": "2025-11-03",
-      "soja": null,
+      "soja": 490000,
       "dolar": 1500
     },
     {
       "fecha": "2025-11-04",
-      "soja": null,
+      "soja": 480000,
       "dolar": 1485
     },
     {
       "fecha": "2025-11-05",
-      "soja": null,
+      "soja": 483500,
       "dolar": 1475
     },
     {
       "fecha": "2025-11-06",
-      "soja": null,
+      "soja": 480000,
       "dolar": 1475
     },
     {
       "fecha": "2025-11-07",
-      "soja": null,
+      "soja": 476500,
       "dolar": 1445
     },
     {
@@ -869,27 +859,27 @@
     },
     {
       "fecha": "2025-11-10",
-      "soja": null,
+      "soja": 480000,
       "dolar": 1445
     },
     {
       "fecha": "2025-11-11",
-      "soja": null,
+      "soja": 480000,
       "dolar": 1440
     },
     {
       "fecha": "2025-11-12",
-      "soja": null,
+      "soja": 480000,
       "dolar": 1435
     },
     {
       "fecha": "2025-11-13",
-      "soja": null,
+      "soja": 486000,
       "dolar": 1430
     },
     {
       "fecha": "2025-11-14",
-      "soja": null,
+      "soja": 478000,
       "dolar": 1425
     },
     {
@@ -904,22 +894,22 @@
     },
     {
       "fecha": "2025-11-17",
-      "soja": null,
+      "soja": 484000,
       "dolar": 1415
     },
     {
       "fecha": "2025-11-18",
-      "soja": null,
+      "soja": 485000,
       "dolar": 1425
     },
     {
       "fecha": "2025-11-19",
-      "soja": null,
+      "soja": 480000,
       "dolar": 1430
     },
     {
       "fecha": "2025-11-20",
-      "soja": null,
+      "soja": 480000,
       "dolar": 1450
     },
     {
@@ -944,22 +934,22 @@
     },
     {
       "fecha": "2025-11-25",
-      "soja": null,
+      "soja": 490000,
       "dolar": 1470
     },
     {
       "fecha": "2025-11-26",
-      "soja": null,
+      "soja": 500000,
       "dolar": 1475
     },
     {
       "fecha": "2025-11-27",
-      "soja": null,
+      "soja": 500000,
       "dolar": 1475
     },
     {
       "fecha": "2025-11-28",
-      "soja": null,
+      "soja": 500000,
       "dolar": 1475
     },
     {
@@ -974,27 +964,27 @@
     },
     {
       "fecha": "2025-12-01",
-      "soja": null,
+      "soja": 500000,
       "dolar": 1475
     },
     {
       "fecha": "2025-12-02",
-      "soja": null,
+      "soja": 500000,
       "dolar": 1480
     },
     {
       "fecha": "2025-12-03",
-      "soja": null,
+      "soja": 495000,
       "dolar": 1480
     },
     {
       "fecha": "2025-12-04",
-      "soja": null,
+      "soja": 494000,
       "dolar": 1470
     },
     {
       "fecha": "2025-12-05",
-      "soja": null,
+      "soja": 490000,
       "dolar": 1460
     },
     {
@@ -1014,22 +1004,22 @@
     },
     {
       "fecha": "2025-12-09",
-      "soja": null,
+      "soja": 490000,
       "dolar": 1465
     },
     {
       "fecha": "2025-12-10",
-      "soja": null,
+      "soja": 496000,
       "dolar": 1460
     },
     {
       "fecha": "2025-12-11",
-      "soja": null,
+      "soja": 500000,
       "dolar": 1460
     },
     {
       "fecha": "2025-12-12",
-      "soja": null,
+      "soja": 497000,
       "dolar": 1465
     },
     {
@@ -1044,27 +1034,27 @@
     },
     {
       "fecha": "2025-12-15",
-      "soja": 495000,
+      "soja": 497500,
       "dolar": 1465
     },
     {
       "fecha": "2025-12-16",
-      "soja": null,
+      "soja": 495000,
       "dolar": 1480
     },
     {
       "fecha": "2025-12-17",
-      "soja": null,
+      "soja": 490000,
       "dolar": 1475
     },
     {
       "fecha": "2025-12-18",
-      "soja": null,
+      "soja": 494000,
       "dolar": 1475
     },
     {
       "fecha": "2025-12-19",
-      "soja": null,
+      "soja": 492000,
       "dolar": 1475
     },
     {
@@ -1079,12 +1069,12 @@
     },
     {
       "fecha": "2025-12-22",
-      "soja": null,
+      "soja": 494500,
       "dolar": 1475
     },
     {
       "fecha": "2025-12-23",
-      "soja": null,
+      "soja": 495000,
       "dolar": 1475
     },
     {
@@ -1099,7 +1089,7 @@
     },
     {
       "fecha": "2025-12-26",
-      "soja": null,
+      "soja": 500000,
       "dolar": 1475
     },
     {
@@ -1114,12 +1104,12 @@
     },
     {
       "fecha": "2025-12-29",
-      "soja": null,
+      "soja": 498000,
       "dolar": 1475
     },
     {
       "fecha": "2025-12-30",
-      "soja": null,
+      "soja": 500000,
       "dolar": 1480
     },
     {
@@ -1134,7 +1124,7 @@
     },
     {
       "fecha": "2026-01-02",
-      "soja": null,
+      "soja": 498000,
       "dolar": 1495
     },
     {
@@ -1149,27 +1139,27 @@
     },
     {
       "fecha": "2026-01-05",
-      "soja": null,
+      "soja": 500000,
       "dolar": 1495
     },
     {
       "fecha": "2026-01-06",
-      "soja": null,
+      "soja": 504830,
       "dolar": 1490
     },
     {
       "fecha": "2026-01-07",
-      "soja": null,
+      "soja": 504900,
       "dolar": 1485
     },
     {
       "fecha": "2026-01-08",
-      "soja": null,
+      "soja": 505000,
       "dolar": 1485
     },
     {
       "fecha": "2026-01-09",
-      "soja": null,
+      "soja": 505000,
       "dolar": 1490
     },
     {
@@ -1184,27 +1174,27 @@
     },
     {
       "fecha": "2026-01-12",
-      "soja": null,
+      "soja": 505000,
       "dolar": 1490
     },
     {
       "fecha": "2026-01-13",
-      "soja": null,
+      "soja": 500000,
       "dolar": 1485
     },
     {
       "fecha": "2026-01-14",
-      "soja": null,
+      "soja": 500000,
       "dolar": 1480
     },
     {
       "fecha": "2026-01-15",
-      "soja": 480000,
+      "soja": 495000,
       "dolar": 1470
     },
     {
       "fecha": "2026-01-16",
-      "soja": null,
+      "soja": 485000,
       "dolar": 1455
     },
     {
@@ -1219,27 +1209,27 @@
     },
     {
       "fecha": "2026-01-19",
-      "soja": null,
+      "soja": 485000,
       "dolar": 1460
     },
     {
       "fecha": "2026-01-20",
-      "soja": null,
+      "soja": 485500,
       "dolar": 1460
     },
     {
       "fecha": "2026-01-21",
-      "soja": null,
+      "soja": 480500,
       "dolar": 1455
     },
     {
       "fecha": "2026-01-22",
-      "soja": null,
+      "soja": 479900,
       "dolar": 1450
     },
     {
       "fecha": "2026-01-23",
-      "soja": null,
+      "soja": 475000,
       "dolar": 1455
     },
     {
@@ -1254,27 +1244,27 @@
     },
     {
       "fecha": "2026-01-26",
-      "soja": null,
+      "soja": 470000,
       "dolar": 1460
     },
     {
       "fecha": "2026-01-27",
-      "soja": null,
+      "soja": 475000,
       "dolar": 1465
     },
     {
       "fecha": "2026-01-28",
-      "soja": null,
+      "soja": 475000,
       "dolar": 1465
     },
     {
       "fecha": "2026-01-29",
-      "soja": null,
+      "soja": 475000,
       "dolar": 1465
     },
     {
       "fecha": "2026-01-30",
-      "soja": null,
+      "soja": 476000,
       "dolar": 1465
     },
     {
@@ -1289,27 +1279,27 @@
     },
     {
       "fecha": "2026-02-02",
-      "soja": null,
+      "soja": 470000,
       "dolar": 1465
     },
     {
       "fecha": "2026-02-03",
-      "soja": null,
+      "soja": 475000,
       "dolar": 1465
     },
     {
       "fecha": "2026-02-04",
-      "soja": null,
+      "soja": 475000,
       "dolar": 1465
     },
     {
       "fecha": "2026-02-05",
-      "soja": null,
+      "soja": 480000,
       "dolar": 1460
     },
     {
       "fecha": "2026-02-06",
-      "soja": null,
+      "soja": 476500,
       "dolar": 1450
     },
     {
@@ -1324,27 +1314,27 @@
     },
     {
       "fecha": "2026-02-09",
-      "soja": null,
+      "soja": 470000,
       "dolar": 1440
     },
     {
       "fecha": "2026-02-10",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1425
     },
     {
       "fecha": "2026-02-11",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1420
     },
     {
       "fecha": "2026-02-12",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1415
     },
     {
       "fecha": "2026-02-13",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1420
     },
     {
@@ -1369,17 +1359,17 @@
     },
     {
       "fecha": "2026-02-18",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1420
     },
     {
       "fecha": "2026-02-19",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1410
     },
     {
       "fecha": "2026-02-20",
-      "soja": null,
+      "soja": 456000,
       "dolar": 1395
     },
     {
@@ -1394,27 +1384,27 @@
     },
     {
       "fecha": "2026-02-23",
-      "soja": null,
+      "soja": 455000,
       "dolar": 1390
     },
     {
       "fecha": "2026-02-24",
-      "soja": null,
+      "soja": 455000,
       "dolar": 1400
     },
     {
       "fecha": "2026-02-25",
-      "soja": null,
+      "soja": 460000,
       "dolar": 1415
     },
     {
       "fecha": "2026-02-26",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1425
     },
     {
       "fecha": "2026-02-27",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1420
     },
     {
@@ -1429,27 +1419,27 @@
     },
     {
       "fecha": "2026-03-02",
-      "soja": null,
+      "soja": 460000,
       "dolar": 1415
     },
     {
       "fecha": "2026-03-03",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1435
     },
     {
       "fecha": "2026-03-04",
-      "soja": null,
+      "soja": 460000,
       "dolar": 1420
     },
     {
       "fecha": "2026-03-05",
-      "soja": null,
+      "soja": 460000,
       "dolar": 1425
     },
     {
       "fecha": "2026-03-06",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1435
     },
     {
@@ -1464,27 +1454,27 @@
     },
     {
       "fecha": "2026-03-09",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1435
     },
     {
       "fecha": "2026-03-10",
-      "soja": null,
+      "soja": 461500,
       "dolar": 1420
     },
     {
       "fecha": "2026-03-11",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1415
     },
     {
       "fecha": "2026-03-12",
-      "soja": null,
+      "soja": 470000,
       "dolar": 1415
     },
     {
       "fecha": "2026-03-13",
-      "soja": null,
+      "soja": 475000,
       "dolar": 1420
     },
     {
@@ -1499,27 +1489,27 @@
     },
     {
       "fecha": "2026-03-16",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1415
     },
     {
       "fecha": "2026-03-17",
-      "soja": null,
+      "soja": 474500,
       "dolar": 1415
     },
     {
       "fecha": "2026-03-18",
-      "soja": null,
+      "soja": 480000,
       "dolar": 1415
     },
     {
       "fecha": "2026-03-19",
-      "soja": null,
+      "soja": 485000,
       "dolar": 1415
     },
     {
       "fecha": "2026-03-20",
-      "soja": null,
+      "soja": 485000,
       "dolar": 1410
     },
     {
@@ -1544,17 +1534,17 @@
     },
     {
       "fecha": "2026-03-25",
-      "soja": null,
+      "soja": 483000,
       "dolar": 1400
     },
     {
       "fecha": "2026-03-26",
-      "soja": null,
+      "soja": 484000,
       "dolar": 1390
     },
     {
       "fecha": "2026-03-27",
-      "soja": null,
+      "soja": 440000,
       "dolar": 1405
     },
     {
@@ -1569,17 +1559,17 @@
     },
     {
       "fecha": "2026-03-30",
-      "soja": null,
+      "soja": 440000,
       "dolar": 1420
     },
     {
       "fecha": "2026-03-31",
-      "soja": null,
+      "soja": 440000,
       "dolar": 1405
     },
     {
       "fecha": "2026-04-01",
-      "soja": null,
+      "soja": 440000,
       "dolar": 1415
     },
     {
@@ -1604,27 +1594,27 @@
     },
     {
       "fecha": "2026-04-06",
-      "soja": null,
+      "soja": 440000,
       "dolar": 1415
     },
     {
       "fecha": "2026-04-07",
-      "soja": null,
+      "soja": 440000,
       "dolar": 1415
     },
     {
       "fecha": "2026-04-08",
-      "soja": null,
+      "soja": 434000,
       "dolar": 1410
     },
     {
       "fecha": "2026-04-09",
-      "soja": null,
+      "soja": 432000,
       "dolar": 1405
     },
     {
       "fecha": "2026-04-10",
-      "soja": null,
+      "soja": 440000,
       "dolar": 1395
     },
     {
@@ -1639,27 +1629,27 @@
     },
     {
       "fecha": "2026-04-13",
-      "soja": null,
+      "soja": 430000,
       "dolar": 1385
     },
     {
       "fecha": "2026-04-14",
-      "soja": null,
+      "soja": 430500,
       "dolar": 1385
     },
     {
       "fecha": "2026-04-15",
-      "soja": 431000,
+      "soja": 430000,
       "dolar": 1385
     },
     {
       "fecha": "2026-04-16",
-      "soja": null,
+      "soja": 430000,
       "dolar": 1380
     },
     {
       "fecha": "2026-04-17",
-      "soja": null,
+      "soja": 430000,
       "dolar": 1390
     },
     {
@@ -1674,27 +1664,27 @@
     },
     {
       "fecha": "2026-04-20",
-      "soja": null,
+      "soja": 430000,
       "dolar": 1400
     },
     {
       "fecha": "2026-04-21",
-      "soja": null,
+      "soja": 430000,
       "dolar": 1400
     },
     {
       "fecha": "2026-04-22",
-      "soja": null,
+      "soja": 430000,
       "dolar": 1400
     },
     {
       "fecha": "2026-04-23",
-      "soja": null,
+      "soja": 430000,
       "dolar": 1415
     },
     {
       "fecha": "2026-04-24",
-      "soja": null,
+      "soja": 430000,
       "dolar": 1420
     },
     {
@@ -1709,22 +1699,22 @@
     },
     {
       "fecha": "2026-04-27",
-      "soja": null,
+      "soja": 429000,
       "dolar": 1440
     },
     {
       "fecha": "2026-04-28",
-      "soja": null,
+      "soja": 430000,
       "dolar": 1430
     },
     {
       "fecha": "2026-04-29",
-      "soja": null,
+      "soja": 430000,
       "dolar": 1415
     },
     {
       "fecha": "2026-04-30",
-      "soja": null,
+      "soja": 422000,
       "dolar": 1415
     },
     {
@@ -1744,27 +1734,27 @@
     },
     {
       "fecha": "2026-05-04",
-      "soja": null,
+      "soja": 430000,
       "dolar": 1425
     },
     {
       "fecha": "2026-05-05",
-      "soja": null,
+      "soja": 440000,
       "dolar": 1415
     },
     {
       "fecha": "2026-05-06",
-      "soja": null,
+      "soja": 435000,
       "dolar": 1410
     },
     {
       "fecha": "2026-05-07",
-      "soja": null,
+      "soja": 439800,
       "dolar": 1420
     },
     {
       "fecha": "2026-05-08",
-      "soja": null,
+      "soja": 444000,
       "dolar": 1420
     },
     {
@@ -1779,27 +1769,27 @@
     },
     {
       "fecha": "2026-05-11",
-      "soja": null,
+      "soja": 450000,
       "dolar": 1415
     },
     {
       "fecha": "2026-05-12",
-      "soja": null,
+      "soja": 455000,
       "dolar": 1405
     },
     {
       "fecha": "2026-05-13",
-      "soja": null,
+      "soja": 461000,
       "dolar": 1405
     },
     {
       "fecha": "2026-05-14",
-      "soja": null,
+      "soja": 460000,
       "dolar": 1415
     },
     {
       "fecha": "2026-05-15",
-      "soja": 455000,
+      "soja": 460200,
       "dolar": 1420
     },
     {
@@ -1814,27 +1804,27 @@
     },
     {
       "fecha": "2026-05-18",
-      "soja": null,
+      "soja": 470000,
       "dolar": 1420
     },
     {
       "fecha": "2026-05-19",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1420
     },
     {
       "fecha": "2026-05-20",
-      "soja": null,
+      "soja": 460000,
       "dolar": 1420
     },
     {
       "fecha": "2026-05-21",
-      "soja": null,
+      "soja": 460000,
       "dolar": 1410
     },
     {
       "fecha": "2026-05-22",
-      "soja": null,
+      "soja": 460000,
       "dolar": 1425
     },
     {
@@ -1854,22 +1844,22 @@
     },
     {
       "fecha": "2026-05-26",
-      "soja": null,
+      "soja": 461000,
       "dolar": 1430
     },
     {
       "fecha": "2026-05-27",
-      "soja": null,
+      "soja": 464000,
       "dolar": 1430
     },
     {
       "fecha": "2026-05-28",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1430
     },
     {
       "fecha": "2026-05-29",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1430
     },
     {
@@ -1884,27 +1874,27 @@
     },
     {
       "fecha": "2026-06-01",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1445
     },
     {
       "fecha": "2026-06-02",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1450
     },
     {
       "fecha": "2026-06-03",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1460
     },
     {
       "fecha": "2026-06-04",
-      "soja": null,
+      "soja": 455000,
       "dolar": 1455
     },
     {
       "fecha": "2026-06-05",
-      "soja": null,
+      "soja": 455000,
       "dolar": 1460
     },
     {
@@ -1919,27 +1909,27 @@
     },
     {
       "fecha": "2026-06-08",
-      "soja": null,
+      "soja": 455000,
       "dolar": 1465
     },
     {
       "fecha": "2026-06-09",
-      "soja": null,
+      "soja": 460000,
       "dolar": 1460
     },
     {
       "fecha": "2026-06-10",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1455
     },
     {
       "fecha": "2026-06-11",
-      "soja": null,
+      "soja": 460000,
       "dolar": 1450
     },
     {
       "fecha": "2026-06-12",
-      "soja": null,
+      "soja": 460000,
       "dolar": 1450
     },
     {
@@ -1959,22 +1949,22 @@
     },
     {
       "fecha": "2026-06-16",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1450
     },
     {
       "fecha": "2026-06-17",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1461
     },
     {
       "fecha": "2026-06-18",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1470
     },
     {
       "fecha": "2026-06-19",
-      "soja": null,
+      "soja": 465000,
       "dolar": 1482
     },
     {
@@ -1989,27 +1979,32 @@
     },
     {
       "fecha": "2026-06-22",
-      "soja": null,
+      "soja": 470000,
       "dolar": 1482
     },
     {
       "fecha": "2026-06-23",
-      "soja": null,
+      "soja": 475000,
       "dolar": 1490
     },
     {
       "fecha": "2026-06-24",
-      "soja": null,
+      "soja": 475000,
       "dolar": 1495
     },
     {
       "fecha": "2026-06-25",
-      "soja": null,
+      "soja": 480000,
       "dolar": 1495
     },
     {
       "fecha": "2026-06-26",
       "soja": 480000,
+      "dolar": 1495
+    },
+    {
+      "fecha": "2026-06-28",
+      "soja": null,
       "dolar": 1495
     }
   ]

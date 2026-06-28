@@ -256,6 +256,7 @@ function App() {
   const [apiLoad, setApiLoad] = useState(false);
   const [apiErr,  setApiErr]  = useState(null);
   const [priceHist, setPriceHist] = useState([]);
+  const [priceDate, setPriceDate] = useState("");
   const [vForm, setVForm]   = useState({ socio:"", mes:"", tn:"" });
   const [vSaving, setVSaving] = useState(false);
   const [vMsg, setVMsg]     = useState(null);
@@ -288,6 +289,7 @@ function App() {
           op: "registrar_venta",
           secret: sessionStorage.getItem("pw") || "",
           socio: vForm.socio, mes: vForm.mes, tn,
+          precio: v.soja_hoy,   // precio de soja del día → facturación exacta
         }),
       });
       // Releemos hasta 3 veces (la escritura puede tardar en propagarse).
@@ -321,6 +323,7 @@ function App() {
           ...(d.dolar ? { dolar_hoy: d.dolar } : {}),
         }));
         if (Array.isArray(d.history)) setPriceHist(d.history);
+        if (d.fecha) setPriceDate(d.fecha);
       })
       .catch(() => {});
   }, []);
@@ -416,6 +419,8 @@ function App() {
   );
 
   const tabSituacion = h("div", null,
+    h("div", { style:{ display:"flex", alignItems:"center", gap:7, fontSize:12.5, color:T.text3, background:T.surface, border:`1px solid ${T.border}`, borderRadius:T.rs || 10, padding:"9px 12px", marginBottom:14 } },
+      ic("flask", 15, T.score), h("span", null, "Datos de demostración — esta sección usa valores de ejemplo.")),
     h(SecLabel, null, "Mi stock disponible"),
     h("div", { style: S.grid2 },
       h(Slider, { label:"Stock de dólares", value:v.stock_d, onChange:set("stock_d"), hint:"1 = pocos · 5 = de sobra" }),
@@ -453,7 +458,7 @@ function App() {
     )
   );
 
-  const HIST_SUBS = [ { icon:"box", label:"Ventas" }, { icon:"chart-line", label:"Precios" }, { icon:"pencil", label:"Registros" } ];
+  const HIST_SUBS = [ { icon:"box", label:"Ventas" }, { icon:"chart-line", label:"Precios" } ];
   const DC = { soja:{ fg:T.soja, lbl:"Soja" }, dolares:{ fg:T.dolar, lbl:"Dólares" }, mixto:{ fg:T.score, lbl:"Mixto" } };
   const thS = { fontSize:11, color:T.text3, fontWeight:600, padding:"8px", textAlign:"right", borderBottom:`1px solid ${T.border}`, whiteSpace:"nowrap" };
   const tdS = { padding:"9px 8px", color:T.text2, borderBottom:`1px solid ${T.surface2}`, textAlign:"right", fontSize:13.5 };
@@ -466,6 +471,7 @@ function App() {
   const mesActual    = precios.length ? precios[precios.length - 1].mes  : "";
   const totalVendido = totalRow ? totalRow.ventas.reduce((a,b) => a+b, 0) : 0;
   const totalResto   = totalRow ? totalRow.resto : 0;
+  const fact         = (apiData && apiData.facturado) ? apiData.facturado : { total:0, ultimoMes:null };
 
   const loadingEl = h("div", { style:{ textAlign:"center", color:T.text3, padding:34, fontSize:13 } }, "Cargando datos de la planilla…");
   const errorEl   = h("div", { style:{ textAlign:"center", color:T.red, padding:34, fontSize:13 } }, apiErr);
@@ -496,7 +502,7 @@ function App() {
   const subVentas = apiLoad ? loadingEl : apiErr ? errorEl : h("div", null,
     formVenta,
     h("div", { style:{ fontSize:11.5, color:T.text3, marginBottom:11, lineHeight:1.6 } },
-      "Campaña 2026-2027 · Stock inicial 12 tn/socio · Precio actual $" + FMT(precioActual) + "/tn · Actualizado " + (apiData ? new Date(apiData.actualizado).toLocaleDateString("es-AR") : "")
+      "Campaña 2026-2027 · Stock inicial 12 tn/socio · Precio actual $" + FMT(v.soja_hoy || precioActual) + "/tn · Actualizado " + (priceDate ? new Date(priceDate + "T00:00:00").toLocaleDateString("es-AR") : (apiData ? new Date(apiData.actualizado).toLocaleDateString("es-AR") : ""))
     ),
     h("div", { style:{ overflowX:"auto" } },
       h("table", { style:{ width:"100%", borderCollapse:"collapse" } },
@@ -524,7 +530,8 @@ function App() {
     ),
     totalRow && h("div", { style:{ marginTop:12, padding:"11px 13px", background:T.sojaBg, border:`1px solid ${T.sojaBorder}`, borderRadius:T.rs, fontSize:12, color:T.text2 } },
       "Total vendido: ", h("span", { style:{ color:T.soja, fontWeight:700 } }, totalVendido + " tn"),
-      "  ·  Facturación: ", h("span", { style:{ color:T.soja, fontWeight:700 } }, "$" + FMT(totalVendido * precioActual)),
+      "  ·  Facturado total: ", h("span", { style:{ color:T.soja, fontWeight:700 } }, "$" + FMT(fact.total)),
+      fact.ultimoMes ? [ "  ·  Último mes (" + fact.ultimoMes.mes + "): ", h("span", { style:{ color:T.soja, fontWeight:700 } }, "$" + FMT(fact.ultimoMes.importe)) ] : null,
       "  ·  Resto: ", h("span", { style:{ color:T.score, fontWeight:700 } }, totalResto + " tn")
     )
   );
@@ -622,7 +629,7 @@ function App() {
         )
       )
     ),
-    histSub === 0 ? subVentas : histSub === 1 ? subPrecios : subRegistros
+    histSub === 0 ? subVentas : subPrecios
   );
 
   return h("div", { style: S.page },

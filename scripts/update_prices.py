@@ -21,6 +21,16 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PRICES = os.path.join(HERE, "..", "prices.json")
 DAYS = 400
 
+# API de la Cámara Arbitral de la BCR. Devuelve la pizarra DIARIA de soja, lo que
+# permite armar la serie histórica diaria (antes solo teníamos anclas mensuales).
+# Límite: máx. 1 semana por consulta → iteramos semana a semana.
+# Credenciales públicas, expuestas en el widget de acabase.com.ar.
+BCR_LOGIN   = "https://api.bcr.com.ar/gix/v1.0/Login"
+BCR_PRECIOS = "https://api.bcr.com.ar/gix/v1.0/PreciosCamara"
+BCR_API_KEY = "A6D9A60F-2A13-F111-9448-00155D09E215"
+BCR_SECRET  = "6cbaeddacc47754da031c0f1cac97074429285a1ad30c16767b710521fd4d144"
+ID_SOJA     = 21
+
 # Anclas históricas de soja (pizarra Rosario $/tn) para que el gráfico no
 # arranque vacío. Solo se usan si todavía no están en la historia.
 SOJA_SEED = {
@@ -62,6 +72,46 @@ def dolar_backfill():
     return out
 
 
+def bcr_login():
+    """Token Bearer de la API de la Cámara Arbitral (BCR)."""
+    req = urllib.request.Request(BCR_LOGIN, method="POST", data=b"", headers={
+        "accept": "application/json", "api_key": BCR_API_KEY, "secret": BCR_SECRET,
+    })
+    d = json.loads(urllib.request.urlopen(req, timeout=20).read().decode("utf-8"))
+    return d["data"]["token"]  # "Bearer eyJ..."
+
+
+def bcr_soja_semana(token, desde, hasta):
+    """Pizarra de soja para un rango de ≤ 7 días → {fecha: precio_int}."""
+    url = (f"{BCR_PRECIOS}?idGrano={ID_SOJA}"
+           f"&fechaConcertacionDesde={desde}&fechaConcertacionHasta={hasta}&page=1")
+    req = urllib.request.Request(url, headers={"accept": "*/*", "Authorization": token})
+    d = json.loads(urllib.request.urlopen(req, timeout=30).read().decode("utf-8"))
+    out = {}
+    for it in (d.get("data") or []):
+        fecha  = (it.get("fecha_Cotizacion_Dolar") or "")[:10]
+        precio = it.get("precio_Cotizacion")
+        if fecha and precio:
+            out[fecha] = int(round(precio))
+    return out
+
+
+def soja_backfill_bcr(dias):
+    """Serie DIARIA de soja pizarra (BCR), iterando de a 1 semana (límite de la API)."""
+    token = bcr_login()
+    out = {}
+    hoy = datetime.date.today()
+    cur = hoy - datetime.timedelta(days=dias)
+    while cur <= hoy:
+        fin = min(cur + datetime.timedelta(days=6), hoy)
+        try:
+            out.update(bcr_soja_semana(token, cur.isoformat(), fin.isoformat()))
+        except Exception as e:
+            print(f"  ✗ soja semana {cur}: {e}")
+        cur = fin + datetime.timedelta(days=1)
+    return out
+
+
 def load():
     try:
         with open(PRICES) as f:
@@ -91,22 +141,33 @@ def main():
         except Exception as e:
             print(f"✗ backfill dólar: {e}")
 
-    # Semilla de soja (anclas mensuales).
-    for fecha, val in SOJA_SEED.items():
-        put(fecha, soja=val)
-
-    today = datetime.date.today().isoformat()
-    soja = prev.get("soja")
-    dolar = prev.get("dolar")
+    # Serie DIARIA de soja desde la API de la Cámara Arbitral (BCR). Si todavía
+    # hay pocos puntos hacemos backfill completo; si ya está densa, solo
+    # refrescamos las últimas 2 semanas (mucho más barato).
+    soja_serie = {}
+    soja_points = len([p for p in hist.values() if p.get("soja")])
     try:
-        soja = soja_hoy()
+        dias = DAYS if soja_points < 60 else 14
+        soja_serie = soja_backfill_bcr(dias)
+        for fecha, val in soja_serie.items():
+            put(fecha, soja=val)
+        print(f"✓ soja BCR API: {len(soja_serie)} días (backfill {dias}d)")
     except Exception as e:
-        print(f"✗ soja hoy: {e}")
+        print(f"✗ soja BCR API: {e}")
+        # Fallback: anclas mensuales + scrape del HTML para hoy.
+        for fecha, val in SOJA_SEED.items():
+            put(fecha, soja=val)
+        try:
+            put(datetime.date.today().isoformat(), soja=soja_hoy())
+        except Exception as e2:
+            print(f"✗ soja hoy (scrape): {e2}")
+
+    # Dólar oficial de hoy.
+    today = datetime.date.today().isoformat()
     try:
-        dolar = dolar_hoy()
+        put(today, dolar=dolar_hoy())
     except Exception as e:
         print(f"✗ dólar hoy: {e}")
-    put(today, soja=soja, dolar=dolar)
 
     # Recorta ventana y ordena.
     cutoff = (datetime.date.today() - datetime.timedelta(days=DAYS)).isoformat()
@@ -115,12 +176,16 @@ def main():
         for f in sorted(hist) if f >= cutoff
     ]
 
+    # Snapshot "actual" = último valor conocido de cada serie.
+    soja  = next((h["soja"]  for h in reversed(history) if h["soja"]),  prev.get("soja"))
+    dolar = next((h["dolar"] for h in reversed(history) if h["dolar"]), prev.get("dolar"))
+
     out = {
         "soja": soja,
         "dolar": dolar,
         "fecha": today,
         "fuentes": {
-            "soja": "https://www.cac.bcr.com.ar/es/precios-de-pizarra",
+            "soja": "https://api.bcr.com.ar/gix/v1.0/PreciosCamara (Cámara Arbitral BCR, serie diaria) · fallback: scrape pizarra",
             "dolar": "https://dolarapi.com/v1/dolares/oficial (Dólar Oficial BCRA) · historia: ArgentinaDatos",
         },
         "history": history,
