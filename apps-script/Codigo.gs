@@ -20,6 +20,7 @@ function doGet(e) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("VENTAS");
   const rows = sheet.getDataRange().getValues();
   return json({
+    version:     "ventas-2",          // marca para verificar que el deploy tomó el código nuevo
     ventas:      parseVentas(rows),
     precios:     parsePrecios(rows),
     actualizado: new Date().toISOString()
