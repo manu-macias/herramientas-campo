@@ -20,7 +20,7 @@ function doGet(e) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("VENTAS");
   const rows = sheet.getDataRange().getValues();
   return json({
-    version:     "ventas-5",          // marca para verificar que el deploy tomó el código nuevo
+    version:     "ventas-6",          // marca para verificar que el deploy tomó el código nuevo
     ventas:      parseVentas(rows),
     precios:     parsePrecios(rows),
     facturado:   parseFacturacion(),  // { total, ultimoMes:{mes,importe}, porMes }
@@ -246,16 +246,20 @@ function fechaISO(v) {
   return String(v || "").trim();
 }
 
-// Asigna la fecha REAL de venta a las filas de un mes que quedaron sin fecha
-// (backfill). También recalcula precio e importe con la cotización T+1 que
-// manda el cliente (la pizarra del día hábil siguiente, desde prices.json).
-// No toca las filas que ya tienen fecha real.
+// Asigna / corrige la fecha REAL de venta y recalcula precio e importe con la
+// cotización T+1 que manda el cliente (pizarra del día hábil siguiente, de
+// prices.json). Dos modos según el body:
+//   - Backfill: { mes } → toca solo las filas de ese mes que NO tienen fecha.
+//   - Editar ticket ya generado: { desde:"yyyy-mm-dd" } → toca las filas cuya
+//     fecha actual sea `desde` y las mueve a la nueva `fecha`.
 function asignarFecha(body) {
-  const mes    = String(body.mes || "").trim().toUpperCase();
   const fecha  = String(body.fecha || "").trim();
   const precio = parsNum(body.precio);
-  if (MESES_CAMP.indexOf(mes) < 0)        return json({ error: "Mes inválido" });
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return json({ error: "Fecha inválida (yyyy-mm-dd)" });
+  const desde  = String(body.desde || "").trim();
+  const mes    = String(body.mes || "").trim().toUpperCase();
+  const editar = /^\d{4}-\d{2}-\d{2}$/.test(desde);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha))       return json({ error: "Fecha inválida (yyyy-mm-dd)" });
+  if (!editar && MESES_CAMP.indexOf(mes) < 0)   return json({ error: "Mes inválido" });
 
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
@@ -264,8 +268,13 @@ function asignarFecha(body) {
     const rows = sh.getDataRange().getValues();
     let n = 0;
     for (let i = 1; i < rows.length; i++) { // salteamos el encabezado
-      if (String(rows[i][3] || "").trim().toUpperCase() !== mes) continue;
-      if (/^\d{4}-\d{2}-\d{2}$/.test(fechaISO(rows[i][1]))) continue; // ya tiene fecha real
+      const fechaFila = fechaISO(rows[i][1]);
+      if (editar) {
+        if (fechaFila !== desde) continue;                       // solo la venta de esa fecha
+      } else {
+        if (String(rows[i][3] || "").trim().toUpperCase() !== mes) continue;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(fechaFila)) continue;     // backfill: solo filas sin fecha
+      }
       sh.getRange(i + 1, 2).setValue(fecha);
       if (precio > 0) {
         const tn = parsNum(rows[i][4]);

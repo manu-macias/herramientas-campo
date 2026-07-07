@@ -356,9 +356,10 @@ function App() {
   const [vForm, setVForm]   = useState({ socio:"", mes:"", tn:"" });
   const [vSaving, setVSaving] = useState(false);
   const [vMsg, setVMsg]     = useState(null);
-  const [fixFechas, setFixFechas] = useState({});   // mes → fecha elegida para ventas sin fecha
+  const [fixFechas, setFixFechas] = useState({});   // clave → fecha elegida (mes sin fecha o edición de ticket)
   const [fixSaving, setFixSaving] = useState(false);
   const [fixMsg, setFixMsg]       = useState(null);
+  const [editTicket, setEditTicket] = useState(null); // fecha del ticket que se está editando
 
   const logout = () => { sessionStorage.removeItem("auth"); sessionStorage.removeItem("pw"); setAuth(false); };
 
@@ -657,6 +658,48 @@ function App() {
     }
   };
 
+  // Cambia la fecha de un ticket YA generado (recalcula con la cotización T+1).
+  const cambiarFechaTicket = async (fechaActual) => {
+    const nueva = fixFechas["edit-" + fechaActual];
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(nueva || "")) {
+      setFixMsg({ ok:false, txt:"Elegí la nueva fecha de la venta." });
+      return;
+    }
+    if (nueva === fechaActual) { setEditTicket(null); return; }
+    const cot = cotizacionSiguiente(priceHist, nueva);
+    if (!cot) {
+      setFixMsg({ ok:false, txt:"Todavía no hay pizarra del día hábil siguiente al " + FDATE(nueva) + "." });
+      return;
+    }
+    setFixSaving(true); setFixMsg(null);
+    try {
+      await fetch(API_URL, {
+        method:"POST", mode:"no-cors", redirect:"follow",
+        body: JSON.stringify({
+          op: "asignar_fecha",
+          secret: sessionStorage.getItem("pw") || "",
+          desde: fechaActual, fecha: nueva, precio: cot.soja,
+        }),
+      });
+      // Confirmamos releyendo: la fecha vieja ya no debe existir en el log.
+      let fresh = null, ok = false;
+      for (let i = 0; i < 3 && !ok; i++) {
+        await new Promise(r => setTimeout(r, i === 0 ? 600 : 800));
+        fresh = await fetch(API_URL + "&_=" + Date.now()).then(r => r.json());
+        ok = !(fresh.movimientos || []).some(m => m.fecha === fechaActual);
+      }
+      if (fresh) setApiData(fresh);
+      setEditTicket(null);
+      setFixMsg(ok
+        ? { ok:true, txt:"Ticket actualizado al " + FDATE(nueva) + " · cotización " + FDATE(cot.fecha) + " $" + FMT(cot.soja) + "/tn." }
+        : { ok:false, txt:"No se pudo actualizar. Verificá que el Apps Script esté redeployado con la última versión." });
+    } catch (e) {
+      setFixMsg({ ok:false, txt:"Error: " + e.message });
+    } finally {
+      setFixSaving(false);
+    }
+  };
+
   const loadingEl = h("div", { style:{ textAlign:"center", color:T.text3, padding:34, fontSize:13 } }, "Cargando datos de la planilla…");
   const errorEl   = h("div", { style:{ textAlign:"center", color:T.red, padding:34, fontSize:13 } }, apiErr);
 
@@ -742,20 +785,48 @@ function App() {
             ic(fixMsg.ok ? "circle-check" : "alert-triangle", 15), h("span", null, fixMsg.txt)),
           repartos.length === 0 && pendientes.length === 0
           ? h("div", { key:"vacio", style:{ fontSize:12.5, color:T.text3 } }, "Sin ventas registradas todavía.")
-          : repartos.map((rp, i) => h("div", { key:rp.fecha, style:{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, padding:"10px 0", borderBottom: i < repartos.length-1 ? `1px solid ${T.surface2}` : "none" } },
-              h("div", { style:{ minWidth:0 } },
-                h("div", { style:{ fontSize:13.5, fontWeight:600, color:T.text } }, "Venta del " + FDATE(rp.fecha) + " · " + FTN(rp.totalTn)),
-                h("div", { style:{ fontSize:11.5, color: rp.cotiz ? T.text3 : T.dolar, marginTop:2 } },
-                  rp.cotiz
-                    ? "Cotización " + FDATE(rp.cotiz.fecha) + " · $" + FMT(rp.cotiz.soja) + "/tn · total $" + FMT(Math.round(rp.totalTn * rp.cotiz.soja))
-                    : "Cotización pendiente — se toma la pizarra del próximo día hábil")
-              ),
-              h("button", {
-                onClick: () => rp.cotiz && descargarTicketReparto({ fechaVenta: rp.fecha, cotiz: rp.cotiz, filas: rp.filas }),
-                disabled: !rp.cotiz, "aria-label": "descargar ticket",
-                style:{ display:"flex", alignItems:"center", gap:6, padding:"8px 13px", background: rp.cotiz ? T.soja : T.surface2, border:"none", borderRadius:9, color: rp.cotiz ? T.bg : T.faint, fontSize:12.5, fontWeight:700, cursor: rp.cotiz ? "pointer" : "default", flexShrink:0 }
-              }, ic("download", 15), "Ticket")
-            ))
+          : repartos.map((rp, i) => {
+              const editando = editTicket === rp.fecha;
+              const nv = editando ? (fixFechas["edit-" + rp.fecha] || rp.fecha) : null;
+              const nc = editando && /^\d{4}-\d{2}-\d{2}$/.test(nv) ? cotizacionSiguiente(priceHist, nv) : null;
+              return h("div", { key:rp.fecha, style:{ padding:"10px 0", borderBottom: i < repartos.length-1 ? `1px solid ${T.surface2}` : "none" } },
+                h("div", { style:{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 } },
+                  h("div", { style:{ minWidth:0 } },
+                    h("div", { style:{ fontSize:13.5, fontWeight:600, color:T.text } }, "Venta del " + FDATE(rp.fecha) + " · " + FTN(rp.totalTn)),
+                    h("div", { style:{ fontSize:11.5, color: rp.cotiz ? T.text3 : T.dolar, marginTop:2 } },
+                      rp.cotiz
+                        ? "Cotización " + FDATE(rp.cotiz.fecha) + " · $" + FMT(rp.cotiz.soja) + "/tn · total $" + FMT(Math.round(rp.totalTn * rp.cotiz.soja))
+                        : "Cotización pendiente — se toma la pizarra del próximo día hábil")
+                  ),
+                  h("div", { style:{ display:"flex", alignItems:"center", gap:6, flexShrink:0 } },
+                    h("button", {
+                      onClick: () => { setEditTicket(editando ? null : rp.fecha); setFixFechas(prev => ({ ...prev, ["edit-"+rp.fecha]: rp.fecha })); setFixMsg(null); },
+                      "aria-label": "cambiar fecha de la venta",
+                      style:{ display:"flex", alignItems:"center", gap:5, padding:"8px 11px", background: editando ? T.surface2 : "transparent", border:`1px solid ${T.borderStrong}`, borderRadius:9, color:T.text2, fontSize:12.5, fontWeight:600, cursor:"pointer" }
+                    }, ic("calendar-event", 15), "Fecha"),
+                    h("button", {
+                      onClick: () => rp.cotiz && descargarTicketReparto({ fechaVenta: rp.fecha, cotiz: rp.cotiz, filas: rp.filas }),
+                      disabled: !rp.cotiz, "aria-label": "descargar ticket",
+                      style:{ display:"flex", alignItems:"center", gap:6, padding:"8px 13px", background: rp.cotiz ? T.soja : T.surface2, border:"none", borderRadius:9, color: rp.cotiz ? T.bg : T.faint, fontSize:12.5, fontWeight:700, cursor: rp.cotiz ? "pointer" : "default" }
+                    }, ic("download", 15), "Ticket")
+                  )
+                ),
+                editando && h("div", { style:{ marginTop:10 } },
+                  h("div", { style:{ display:"flex", gap:8 } },
+                    h("input", { type:"date", value: nv, max: new Date().toISOString().slice(0,10),
+                      onChange: e => setFixFechas(prev => ({ ...prev, ["edit-"+rp.fecha]: e.target.value })),
+                      style:{ flex:1, minWidth:0, background:T.bg, border:`1px solid ${T.border}`, borderRadius:9, color:T.text, fontSize:13.5, fontFamily:"inherit", padding:"8px 10px", outline:"none", colorScheme:"dark" } }),
+                    h("button", { onClick: () => cambiarFechaTicket(rp.fecha), disabled:fixSaving,
+                      style:{ display:"flex", alignItems:"center", gap:6, padding:"8px 13px", background: fixSaving ? T.surface : T.soja, border:"none", borderRadius:9, color: fixSaving ? T.faint : T.bg, fontSize:12.5, fontWeight:700, cursor: fixSaving ? "default" : "pointer", flexShrink:0 } },
+                      fixSaving ? "Guardando…" : "Guardar")
+                  ),
+                  h("div", { style:{ fontSize:11.5, color: nc ? T.faint : T.dolar, marginTop:6 } },
+                    nc
+                      ? "Quedaría: cotización " + FDATE(nc.fecha) + " · $" + FMT(nc.soja) + "/tn · total $" + FMT(Math.round(rp.totalTn * nc.soja))
+                      : "Sin pizarra del día hábil siguiente para esa fecha todavía.")
+                )
+              );
+            })
         ]
     )
   );
