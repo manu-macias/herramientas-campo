@@ -102,11 +102,14 @@ function Login({ onSuccess }) {
 }
 
 const FMT = (n) => Number(n).toLocaleString("es-AR", { maximumFractionDigits: 0 });
+const MON = (n) => (n == null || isNaN(n)) ? "—" : "$" + FMT(n);
 const PCT = (v) => (v >= 0 ? "+" : "") + (v * 100).toFixed(1) + "%";
 
+// Los precios de mercado arrancan en null y se completan SOLO con prices.json:
+// nunca se muestra un número inventado como si fuera dato oficial.
 const DEFAULTS = {
-  soja_hoy: 465000, dolar_hoy: 1478,
-  soja_prom: 440000, dolar_prom: 1430,
+  soja_hoy: null, dolar_hoy: null,
+  soja_prom: null, dolar_prom: null,
   stock_d: 3, stock_s: 3, urgencia: 3, expect_s: 3,
   tn_soja: 50, usd_dolar: 10000,
 };
@@ -182,7 +185,7 @@ function PriceCard({ label, value, unit, icon, accent, sub }) {
     h("div", { style:{ display:"flex", alignItems:"center", gap:7, fontSize:12.5, fontWeight:500, color:T.text3, marginBottom:7 } },
       icon ? ic(icon, 15, accent || T.text3) : null, h("span", null, label)
     ),
-    h("div", { style:{ color:T.text, fontSize:21, fontWeight:700, marginBottom:7 } }, "$" + FMT(value)),
+    h("div", { style:{ color:T.text, fontSize:21, fontWeight:700, marginBottom:7 } }, MON(value)),
     h("div", { style:{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 } },
       h("div", { style:{ fontSize:11.5, color:T.faint, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" } }, unit),
       h("div", { style:{ display:"flex", alignItems:"center", gap:4, fontSize:10.5, color:T.faint, flexShrink:0 } }, ic("lock", 12), sub || "dato oficial")
@@ -274,6 +277,7 @@ function App() {
   const [apiErr,  setApiErr]  = useState(null);
   const [priceHist, setPriceHist] = useState([]);
   const [priceDate, setPriceDate] = useState("");
+  const [priceErr, setPriceErr]   = useState(false);
   const [vForm, setVForm]   = useState({ socio:"", mes:"", tn:"" });
   const [vSaving, setVSaving] = useState(false);
   const [vMsg, setVMsg]     = useState(null);
@@ -292,6 +296,10 @@ function App() {
     const tn = Number(vForm.tn);
     if (!vForm.socio || !vForm.mes || !tn || tn <= 0) {
       setVMsg({ ok:false, txt:"Completá socio, mes y toneladas (> 0)." });
+      return;
+    }
+    if (!v.soja_hoy) {
+      setVMsg({ ok:false, txt:"No hay precio de soja cargado; no se puede facturar la venta. Recargá la página." });
       return;
     }
     const before = cellVenta(apiData, vForm.socio, vForm.mes);
@@ -347,8 +355,9 @@ function App() {
         }));
         if (hasHist) setPriceHist(d.history);
         if (d.fecha) setPriceDate(d.fecha);
+        if (!d.soja || !d.dolar) setPriceErr(true);
       })
-      .catch(() => {});
+      .catch(() => setPriceErr(true));
   }, []);
 
   useEffect(() => {
@@ -372,8 +381,8 @@ function App() {
   const vt = tint[verdict.cls];
 
   const pct = Math.max(5, Math.min(95, 50 + score * 18));
-  const sojaPs  = v.tn_soja   * v.soja_hoy;
-  const dolarPs = v.usd_dolar * v.dolar_hoy;
+  const sojaPs  = v.soja_hoy  ? v.tn_soja   * v.soja_hoy  : null;
+  const dolarPs = v.dolar_hoy ? v.usd_dolar * v.dolar_hoy : null;
 
   const S = {
     page:  { maxWidth:520, margin:"0 auto", minHeight:"100vh", padding:"20px 16px 48px" },
@@ -383,6 +392,8 @@ function App() {
 
   const fechaFmt = priceDate ? new Date(priceDate + "T00:00:00").toLocaleDateString("es-AR") : null;
   const tabDecision = h("div", null,
+    priceErr && h("div", { style:{ display:"flex", alignItems:"center", gap:7, fontSize:12.5, color:T.red, background:T.redBg, border:`1px solid ${T.redBorder}`, borderRadius:T.rs, padding:"9px 12px", marginTop:14 } },
+      ic("alert-triangle", 15), h("span", null, "No se pudieron cargar los precios oficiales. Recargá la página; no se muestran valores estimados.")),
     h(SecLabel, null, "Precios de hoy" + (fechaFmt ? " · actualizado " + fechaFmt : "")),
     h("div", { style: S.grid2 },
       h(PriceCard, { label:"Soja BCR Rosario", value:v.soja_hoy,  unit:"$/tn",  icon:"plant-2",         accent:T.soja }),
@@ -464,16 +475,16 @@ function App() {
       h("div", { style: S.grid2 },
         h("div", null,
           h("div", { style:{ fontSize:12, color:T.text3, marginBottom:4 } }, "Si vendés soja"),
-          h("div", { style:{ fontSize:22, fontWeight:700, color:T.soja } }, "$" + FMT(sojaPs)),
-          h("div", { style:{ fontSize:11.5, color:T.faint, marginTop:2 } }, v.tn_soja + " tn × $" + FMT(v.soja_hoy) + "/tn")
+          h("div", { style:{ fontSize:22, fontWeight:700, color:T.soja } }, MON(sojaPs)),
+          h("div", { style:{ fontSize:11.5, color:T.faint, marginTop:2 } }, v.tn_soja + " tn × " + MON(v.soja_hoy) + "/tn")
         ),
         h("div", null,
           h("div", { style:{ fontSize:12, color:T.text3, marginBottom:4 } }, "Si vendés dólares"),
-          h("div", { style:{ fontSize:22, fontWeight:700, color:T.dolar } }, "$" + FMT(dolarPs)),
-          h("div", { style:{ fontSize:11.5, color:T.faint, marginTop:2 } }, FMT(v.usd_dolar) + " USD × $" + FMT(v.dolar_hoy))
+          h("div", { style:{ fontSize:22, fontWeight:700, color:T.dolar } }, MON(dolarPs)),
+          h("div", { style:{ fontSize:11.5, color:T.faint, marginTop:2 } }, FMT(v.usd_dolar) + " USD × " + MON(v.dolar_hoy))
         )
       ),
-      h("div", { style:{ marginTop:14, paddingTop:12, borderTop:`1px solid ${T.border}`, fontSize:13, color:T.text3 } },
+      sojaPs != null && dolarPs != null && h("div", { style:{ marginTop:14, paddingTop:12, borderTop:`1px solid ${T.border}`, fontSize:13, color:T.text3 } },
         "Diferencia: ",
         h("span", { style:{ color: sojaPs>dolarPs ? T.soja : T.dolar, fontWeight:700 } }, "$" + FMT(Math.abs(sojaPs-dolarPs))),
         " a favor de " + (sojaPs>dolarPs ? "vender soja" : "vender dólares")

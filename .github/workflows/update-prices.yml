@@ -2,7 +2,8 @@ name: Actualizar precios desde BCR y Dólar Oficial
 
 on:
   schedule:
-    - cron: '30 21 * * 1-5'  # 18:30 Argentina (UTC-3), lunes a viernes — pizarra ya publicada
+    - cron: '0 16 * * 1-5'   # 13:00 Argentina (UTC-3), lunes a viernes — pizarra del día recién publicada
+    - cron: '30 21 * * 1-5'  # 18:30 Argentina — recaptura revisiones de BCR sobre la pizarra del día
   workflow_dispatch:          # permite correrlo manualmente
 
 jobs:
