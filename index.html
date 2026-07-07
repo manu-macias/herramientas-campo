@@ -176,6 +176,27 @@ function NumInput({ label, value, onChange, unit, step, icon, accent }) {
   );
 }
 
+// Tarjeta de solo lectura para datos de mercado (no editables).
+function PriceCard({ label, value, unit, icon, accent, sub }) {
+  return h("div", { style:{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:T.rs, padding:"13px 14px" } },
+    h("div", { style:{ display:"flex", alignItems:"center", gap:7, fontSize:12.5, fontWeight:500, color:T.text3, marginBottom:7 } },
+      icon ? ic(icon, 15, accent || T.text3) : null, h("span", null, label)
+    ),
+    h("div", { style:{ color:T.text, fontSize:21, fontWeight:700, marginBottom:7 } }, "$" + FMT(value)),
+    h("div", { style:{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 } },
+      h("div", { style:{ fontSize:11.5, color:T.faint, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" } }, unit),
+      h("div", { style:{ display:"flex", alignItems:"center", gap:4, fontSize:10.5, color:T.faint, flexShrink:0 } }, ic("lock", 12), sub || "dato oficial")
+    )
+  );
+}
+
+// Promedio de los últimos `dias` días del historial diario (ignora nulls).
+function avgHistory(history, key, refDate, dias) {
+  const cutoff = new Date(refDate + "T00:00:00").getTime() - dias * 86400000;
+  const vals = history.filter(p => p[key] != null && new Date(p.fecha + "T00:00:00").getTime() >= cutoff).map(p => p[key]);
+  return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+}
+
 function PriceChart({ precios }) {
   const canvasRef = useRef(null);
   const chartRef  = useRef(null);
@@ -247,10 +268,6 @@ function App() {
   const [auth, setAuth]       = useState(() => sessionStorage.getItem("auth") === "1");
   const [tab, setTab]         = useState(0);
   const [v, setV]             = useState(DEFAULTS);
-  const [hist, setHist]       = useState(() => {
-    try { return JSON.parse(localStorage.getItem("soja_hist_v3") || "[]"); } catch { return []; }
-  });
-  const [hForm, setHForm]     = useState({ mes:"", soja:"", dolar:"", decision:"soja" });
   const [histSub, setHistSub] = useState(0);
   const [apiData, setApiData] = useState(null);
   const [apiLoad, setApiLoad] = useState(false);
@@ -317,12 +334,18 @@ function App() {
     fetch("prices.json?t=" + Date.now())
       .then(r => r.json())
       .then(d => {
+        const hasHist = Array.isArray(d.history) && d.history.length > 0;
+        const ref = d.fecha || (hasHist ? d.history[d.history.length - 1].fecha : null);
+        const sojaProm  = hasHist && ref ? avgHistory(d.history, "soja",  ref, 90) : null;
+        const dolarProm = hasHist && ref ? avgHistory(d.history, "dolar", ref, 90) : null;
         setV(prev => ({
           ...prev,
-          ...(d.soja  ? { soja_hoy:  d.soja  } : {}),
-          ...(d.dolar ? { dolar_hoy: d.dolar } : {}),
+          ...(d.soja     ? { soja_hoy:   d.soja     } : {}),
+          ...(d.dolar    ? { dolar_hoy:  d.dolar    } : {}),
+          ...(sojaProm   ? { soja_prom:  sojaProm   } : {}),
+          ...(dolarProm  ? { dolar_prom: dolarProm  } : {}),
         }));
-        if (Array.isArray(d.history)) setPriceHist(d.history);
+        if (hasHist) setPriceHist(d.history);
         if (d.fecha) setPriceDate(d.fecha);
       })
       .catch(() => {});
@@ -340,7 +363,6 @@ function App() {
   if (!auth) return h(Login, { onSuccess: () => setAuth(true) });
 
   const set = (k) => (val) => setV(prev => ({ ...prev, [k]: val }));
-  const saveHist = (arr) => { setHist(arr); try { localStorage.setItem("soja_hist_v3", JSON.stringify(arr)); } catch {} };
 
   const { score, soja_rel, dolar_rel, razones } = calcScore(v);
   const claro = Math.abs(score) > 1.2;
@@ -359,16 +381,17 @@ function App() {
     card:  { background:T.surface, border:`1px solid ${T.border}`, borderRadius:T.rs, padding:"13px 14px" },
   };
 
+  const fechaFmt = priceDate ? new Date(priceDate + "T00:00:00").toLocaleDateString("es-AR") : null;
   const tabDecision = h("div", null,
-    h(SecLabel, null, "Precios de hoy"),
+    h(SecLabel, null, "Precios de hoy" + (fechaFmt ? " · actualizado " + fechaFmt : "")),
     h("div", { style: S.grid2 },
-      h(NumInput, { label:"Soja BCR Rosario", value:v.soja_hoy,  onChange:set("soja_hoy"),  unit:"$/tn", step:1000, icon:"plant-2", accent:T.soja }),
-      h(NumInput, { label:"Dólar oficial",     value:v.dolar_hoy, onChange:set("dolar_hoy"), unit:"$/USD", step:10, icon:"currency-dollar", accent:T.dolar })
+      h(PriceCard, { label:"Soja BCR Rosario", value:v.soja_hoy,  unit:"$/tn",  icon:"plant-2",         accent:T.soja }),
+      h(PriceCard, { label:"Dólar oficial",    value:v.dolar_hoy, unit:"$/USD", icon:"currency-dollar", accent:T.dolar })
     ),
     h(SecLabel, null, "Promedios de referencia (últimos 3 meses)"),
     h("div", { style: S.grid2 },
-      h(NumInput, { label:"Soja promedio",  value:v.soja_prom,  onChange:set("soja_prom"),  unit:"$/tn",  step:1000 }),
-      h(NumInput, { label:"Dólar promedio", value:v.dolar_prom, onChange:set("dolar_prom"), unit:"$/USD", step:10   })
+      h(PriceCard, { label:"Soja promedio",  value:v.soja_prom,  unit:"$/tn",  sub:"calculado" }),
+      h(PriceCard, { label:"Dólar promedio", value:v.dolar_prom, unit:"$/USD", sub:"calculado" })
     ),
     h("div", { style:{ background:vt.bg, border:`1px solid ${vt.border}`, borderRadius:T.r, padding:"18px 16px", margin:"16px 0" } },
       h("div", { style:{ display:"flex", alignItems:"center", gap:14 } },
@@ -459,7 +482,6 @@ function App() {
   );
 
   const HIST_SUBS = [ { icon:"box", label:"Ventas" }, { icon:"chart-line", label:"Precios" } ];
-  const DC = { soja:{ fg:T.soja, lbl:"Soja" }, dolares:{ fg:T.dolar, lbl:"Dólares" }, mixto:{ fg:T.score, lbl:"Mixto" } };
   const thS = { fontSize:11, color:T.text3, fontWeight:600, padding:"8px", textAlign:"right", borderBottom:`1px solid ${T.border}`, whiteSpace:"nowrap" };
   const tdS = { padding:"9px 8px", color:T.text2, borderBottom:`1px solid ${T.surface2}`, textAlign:"right", fontSize:13.5 };
   const tdN = { padding:"9px 8px", color:T.text, borderBottom:`1px solid ${T.surface2}`, fontSize:13.5, fontWeight:600 };
@@ -557,67 +579,6 @@ function App() {
         )
       )
     )
-  );
-
-  const subRegistros = h("div", null,
-    h("div", { style:{ ...S.grid2, marginBottom:9 } },
-      ...[
-        { lbl:"Mes", key:"mes", type:"text", placeholder:"Jun 2026" },
-        { lbl:"Soja $/tn", key:"soja", type:"number" },
-        { lbl:"Dólar $/USD", key:"dolar", type:"number" },
-      ].map(f => h("div", { key:f.key, style: S.card },
-        h("div", { style:{ fontSize:11.5, fontWeight:500, color:T.text3, marginBottom:6 } }, f.lbl),
-        h("input", { type:f.type||"text", value:hForm[f.key], placeholder:f.placeholder||"",
-          onChange: e => setHForm(p => ({ ...p, [f.key]: e.target.value })),
-          style:{ width:"100%", background:"transparent", border:"none", outline:"none", color:T.text, fontSize:15, fontWeight:600, fontFamily:"inherit" } })
-      )),
-      h("div", { style: S.card },
-        h("div", { style:{ fontSize:11.5, fontWeight:500, color:T.text3, marginBottom:6 } }, "Decisión"),
-        h("select", { value:hForm.decision, onChange: e => setHForm(p => ({ ...p, decision: e.target.value })),
-          style:{ background:"transparent", border:"none", outline:"none", color:T.text, fontSize:14, fontWeight:600, fontFamily:"inherit", width:"100%", cursor:"pointer" } },
-          h("option", { value:"soja" }, "Soja"),
-          h("option", { value:"dolares" }, "Dólares"),
-          h("option", { value:"mixto" }, "Mixto")
-        )
-      )
-    ),
-    h("button", {
-      onClick: () => {
-        if (!hForm.mes || !hForm.soja || !hForm.dolar) return;
-        saveHist([...hist, { ...hForm, fecha: Date.now() }]);
-        setHForm({ mes:"", soja:"", dolar:"", decision:"soja" });
-      },
-      style:{ width:"100%", padding:12, background:T.surface2, border:`1px solid ${T.borderStrong}`, borderRadius:T.rs, color:T.text, fontSize:13.5, fontWeight:600, cursor:"pointer", marginBottom:14, display:"flex", alignItems:"center", justifyContent:"center", gap:7 }
-    }, ic("plus", 16), "Agregar registro"),
-    hist.length === 0
-      ? h("div", { style:{ textAlign:"center", color:T.text3, fontSize:13, padding:"30px 16px", border:`1px dashed ${T.border}`, borderRadius:T.rs } }, "Sin registros todavía.")
-      : h("div", { style:{ overflowX:"auto" } },
-          h("table", { style:{ width:"100%", borderCollapse:"collapse", fontSize:13 } },
-            h("thead", null, h("tr", null,
-              ...["Mes","Soja","Dólar","Decisión",""].map((lbl,i) =>
-                h("th", { key:i, style:{ ...thS, textAlign: i===0?"left":"right" } }, lbl)
-              )
-            )),
-            h("tbody", null,
-              ...[...hist].reverse().map((row, ri) => {
-                const realIdx = hist.length - 1 - ri;
-                const bc = DC[row.decision] || DC.mixto;
-                return h("tr", { key:ri },
-                  h("td", { style:{ ...tdN, textAlign:"left", fontWeight:500 } }, row.mes),
-                  h("td", { style: tdS }, "$" + FMT(row.soja)),
-                  h("td", { style: tdS }, "$" + FMT(row.dolar)),
-                  h("td", { style:{ padding:"8px", borderBottom:`1px solid ${T.surface2}` } },
-                    h("span", { style:{ display:"inline-block", padding:"2px 9px", borderRadius:6, fontSize:11, fontWeight:600, background:T.surface2, color:bc.fg, border:`1px solid ${T.border}` } }, bc.lbl)
-                  ),
-                  h("td", { style:{ padding:"8px", textAlign:"right", borderBottom:`1px solid ${T.surface2}` } },
-                    h("button", { onClick: () => saveHist(hist.filter((_,i) => i !== realIdx)), "aria-label":"borrar",
-                      style:{ background:"none", border:"none", color:T.text3, cursor:"pointer", display:"inline-flex" } }, ic("x", 15))
-                  )
-                );
-              })
-            )
-          )
-        )
   );
 
   const tabHistorial = h("div", null,
