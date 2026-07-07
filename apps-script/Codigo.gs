@@ -20,7 +20,7 @@ function doGet(e) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("VENTAS");
   const rows = sheet.getDataRange().getValues();
   return json({
-    version:     "ventas-6",          // marca para verificar que el deploy tomó el código nuevo
+    version:     "ventas-7",          // marca para verificar que el deploy tomó el código nuevo
     ventas:      parseVentas(rows),
     precios:     parsePrecios(rows),
     facturado:   parseFacturacion(),  // { total, ultimoMes:{mes,importe}, porMes }
@@ -35,6 +35,7 @@ function doPost(e) {
     const body = JSON.parse(e.postData.contents);
     if (sha256hex(String(body.secret || "")) !== PASS_HASH) return json({ error: "Contraseña inválida" });
     if (body.op === "asignar_fecha") return asignarFecha(body);
+    if (body.op === "borrar_venta")  return borrarVenta(body);
     if (body.op !== "registrar_venta") return json({ error: "Operación no soportada" });
 
     const socio = String(body.socio || "").trim();
@@ -213,6 +214,91 @@ function parseFacturacion() {
     if (porMes[m]) { ultimoMes = { mes: m, importe: redondear(porMes[m]) }; break; }
   }
   return { total: redondear(total), ultimoMes, porMes };
+}
+
+// Borra por completo una venta (todas las filas de FACTURACION con esa fecha):
+// resta las toneladas de la grilla VENTAS (socio×mes), recalcula resto y TOTAL,
+// y elimina las filas del log. Es el inverso de registrar_venta para un ticket
+// entero. La resta nunca deja negativos (si la grilla ya estaba en 0, no cambia).
+function borrarVenta(body) {
+  const fecha = String(body.fecha || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return json({ error: "Fecha inválida (yyyy-mm-dd)" });
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const fsh   = facturacionSheet();
+    const frows = fsh.getDataRange().getValues();
+    const aBorrar = [];   // filas (1-based) de FACTURACION a eliminar
+    const ajustes = [];   // { socio, mes, tn } a restar de la grilla
+    for (let i = 1; i < frows.length; i++) {
+      if (fechaISO(frows[i][1]) !== fecha) continue;
+      ajustes.push({
+        socio: String(frows[i][2] || "").trim(),
+        mes:   String(frows[i][3] || "").trim().toUpperCase(),
+        tn:    parsNum(frows[i][4]),
+      });
+      aBorrar.push(i + 1);
+    }
+    if (!aBorrar.length) return json({ error: "No hay ventas con esa fecha" });
+
+    // Restar de la grilla VENTAS.
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("VENTAS");
+    const rows  = sheet.getDataRange().getValues();
+    const afectados = {};
+    ajustes.forEach(a => {
+      const mi = MESES_CAMP.indexOf(a.mes);
+      if (mi < 0) return;
+      let sr = -1;
+      for (let i = 2; i <= 9; i++) { if (rows[i] && String(rows[i][0]).trim() === a.socio) { sr = i; break; } }
+      if (sr < 0) return;
+      const monthCol = 2 + mi;
+      const nuevo = redondear(parsNum(rows[sr][monthCol]) - a.tn);
+      sheet.getRange(sr + 1, monthCol + 1).setValue(nuevo < 0 ? 0 : nuevo);
+      afectados[a.socio] = sr;
+    });
+    SpreadsheetApp.flush();
+
+    const rows2 = sheet.getDataRange().getValues();
+    // Recalcular "resto" de cada socio afectado (si no es fórmula).
+    Object.keys(afectados).forEach(socio => {
+      const sr = afectados[socio];
+      if (sheet.getRange(sr + 1, 15).getFormula() === "") {
+        let sum = 0;
+        for (let c = 2; c <= 13; c++) sum += parsNum(rows2[sr][c]);
+        sheet.getRange(sr + 1, 15).setValue(redondear(parsNum(rows2[sr][1]) - sum));
+      }
+    });
+    // Recalcular fila TOTAL (celdas que no sean fórmula).
+    let tr = -1;
+    for (let j = 2; j <= 9; j++) { if (rows2[j] && String(rows2[j][0]).trim() === "TOTAL") { tr = j; break; } }
+    if (tr >= 0) {
+      for (let c = 1; c <= 14; c++) {
+        if (sheet.getRange(tr + 1, c + 1).getFormula() !== "") continue;
+        let s = 0;
+        for (let k = 2; k <= 9; k++) { if (k === tr) continue; s += parsNum(rows2[k][c]); }
+        sheet.getRange(tr + 1, c + 1).setValue(redondear(s));
+      }
+    }
+    SpreadsheetApp.flush();
+
+    // Borrar las filas del log de abajo hacia arriba (para no correr los índices).
+    aBorrar.sort((a, b) => b - a).forEach(r => fsh.deleteRow(r));
+    SpreadsheetApp.flush();
+
+    const fresh = sheet.getDataRange().getValues();
+    return json({
+      ok:          true,
+      borradas:    aBorrar.length,
+      ventas:      parseVentas(fresh),
+      precios:     parsePrecios(fresh),
+      facturado:   parseFacturacion(),
+      movimientos: parseMovimientos(),
+      actualizado: new Date().toISOString(),
+    });
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // Log de ventas individuales para los tickets de reparto. La fecha es el día en
