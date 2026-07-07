@@ -20,7 +20,7 @@ function doGet(e) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("VENTAS");
   const rows = sheet.getDataRange().getValues();
   return json({
-    version:     "ventas-4",          // marca para verificar que el deploy tomó el código nuevo
+    version:     "ventas-5",          // marca para verificar que el deploy tomó el código nuevo
     ventas:      parseVentas(rows),
     precios:     parsePrecios(rows),
     facturado:   parseFacturacion(),  // { total, ultimoMes:{mes,importe}, porMes }
@@ -33,8 +33,9 @@ function doGet(e) {
 function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents);
-    if (body.op !== "registrar_venta") return json({ error: "Operación no soportada" });
     if (sha256hex(String(body.secret || "")) !== PASS_HASH) return json({ error: "Contraseña inválida" });
+    if (body.op === "asignar_fecha") return asignarFecha(body);
+    if (body.op !== "registrar_venta") return json({ error: "Operación no soportada" });
 
     const socio = String(body.socio || "").trim();
     const mes   = String(body.mes || "").trim().toUpperCase();
@@ -243,6 +244,41 @@ function parseMovimientos() {
 function fechaISO(v) {
   if (v instanceof Date) return Utilities.formatDate(v, "America/Argentina/Buenos_Aires", "yyyy-MM-dd");
   return String(v || "").trim();
+}
+
+// Asigna la fecha REAL de venta a las filas de un mes que quedaron sin fecha
+// (backfill). También recalcula precio e importe con la cotización T+1 que
+// manda el cliente (la pizarra del día hábil siguiente, desde prices.json).
+// No toca las filas que ya tienen fecha real.
+function asignarFecha(body) {
+  const mes    = String(body.mes || "").trim().toUpperCase();
+  const fecha  = String(body.fecha || "").trim();
+  const precio = parsNum(body.precio);
+  if (MESES_CAMP.indexOf(mes) < 0)        return json({ error: "Mes inválido" });
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return json({ error: "Fecha inválida (yyyy-mm-dd)" });
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sh = facturacionSheet();
+    const rows = sh.getDataRange().getValues();
+    let n = 0;
+    for (let i = 1; i < rows.length; i++) { // salteamos el encabezado
+      if (String(rows[i][3] || "").trim().toUpperCase() !== mes) continue;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(fechaISO(rows[i][1]))) continue; // ya tiene fecha real
+      sh.getRange(i + 1, 2).setValue(fecha);
+      if (precio > 0) {
+        const tn = parsNum(rows[i][4]);
+        sh.getRange(i + 1, 6).setValue(precio);
+        sh.getRange(i + 1, 7).setValue(redondear(tn * precio));
+      }
+      n++;
+    }
+    SpreadsheetApp.flush();
+    return json({ ok: true, corregidas: n, movimientos: parseMovimientos(), facturado: parseFacturacion() });
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // Backfill OPCIONAL para las ventas ya cargadas (que no tienen precio guardado).

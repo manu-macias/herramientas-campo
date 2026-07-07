@@ -356,6 +356,9 @@ function App() {
   const [vForm, setVForm]   = useState({ socio:"", mes:"", tn:"" });
   const [vSaving, setVSaving] = useState(false);
   const [vMsg, setVMsg]     = useState(null);
+  const [fixFechas, setFixFechas] = useState({});   // mes → fecha elegida para ventas sin fecha
+  const [fixSaving, setFixSaving] = useState(false);
+  const [fixMsg, setFixMsg]       = useState(null);
 
   const logout = () => { sessionStorage.removeItem("auth"); sessionStorage.removeItem("pw"); setAuth(false); };
 
@@ -603,6 +606,57 @@ function App() {
     });
   })();
 
+  // Meses con ventas de backfill (sin fecha real): se les puede asignar la
+  // fecha desde acá, y el Apps Script corrige la hoja FACTURACION.
+  const pendientes = (() => {
+    if (!movsRaw) return [];
+    const porMes = {};
+    movsRaw.forEach(m => {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(m.fecha || "")) return;
+      porMes[m.mes] = (porMes[m.mes] || 0) + m.tn;
+    });
+    return MESES_CAMP.filter(m => porMes[m]).map(m => ({ mes: m, tn: porMes[m] }));
+  })();
+
+  const asignarFecha = async (mes) => {
+    const fecha = fixFechas[mes];
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha || "")) {
+      setFixMsg({ ok:false, txt:"Elegí la fecha real de la venta de " + mes + "." });
+      return;
+    }
+    const cot = cotizacionSiguiente(priceHist, fecha);
+    if (!cot) {
+      setFixMsg({ ok:false, txt:"Todavía no hay pizarra del día hábil siguiente al " + FDATE(fecha) + "." });
+      return;
+    }
+    setFixSaving(true); setFixMsg(null);
+    try {
+      // Mismo esquema que registrar_venta: POST no-cors + confirmación por GET.
+      await fetch(API_URL, {
+        method:"POST", mode:"no-cors", redirect:"follow",
+        body: JSON.stringify({
+          op: "asignar_fecha",
+          secret: sessionStorage.getItem("pw") || "",
+          mes, fecha, precio: cot.soja,
+        }),
+      });
+      let fresh = null, ok = false;
+      for (let i = 0; i < 3 && !ok; i++) {
+        await new Promise(r => setTimeout(r, i === 0 ? 600 : 800));
+        fresh = await fetch(API_URL + "&_=" + Date.now()).then(r => r.json());
+        ok = (fresh.movimientos || []).some(m => m.mes === mes && m.fecha === fecha);
+      }
+      if (fresh) setApiData(fresh);
+      setFixMsg(ok
+        ? { ok:true, txt:"Listo: la venta de " + mes + " quedó con fecha " + FDATE(fecha) + " y ya tiene su ticket." }
+        : { ok:false, txt:"No se pudo asignar. Verificá que el Apps Script esté redeployado con la última versión." });
+    } catch (e) {
+      setFixMsg({ ok:false, txt:"Error: " + e.message });
+    } finally {
+      setFixSaving(false);
+    }
+  };
+
   const loadingEl = h("div", { style:{ textAlign:"center", color:T.text3, padding:34, fontSize:13 } }, "Cargando datos de la planilla…");
   const errorEl   = h("div", { style:{ textAlign:"center", color:T.red, padding:34, fontSize:13 } }, apiErr);
 
@@ -671,8 +725,23 @@ function App() {
         "Cada venta se liquida con la pizarra del día hábil siguiente: vendida un jueves paga la cotización del viernes; un viernes, la del lunes."),
       movsRaw === null
         ? h("div", { style:{ fontSize:12.5, color:T.text3 } }, "Para habilitar los tickets hay que actualizar el Apps Script de la planilla (pegá apps-script/Codigo.gs y redeployá).")
-        : repartos.length === 0
-          ? h("div", { style:{ fontSize:12.5, color:T.text3 } }, "Sin ventas registradas todavía.")
+        : [
+          ...pendientes.map(p => h("div", { key:"fix-"+p.mes, style:{ background:T.surface2, border:`1px solid ${T.borderStrong}`, borderRadius:T.rs, padding:"10px 12px", marginBottom:10 } },
+            h("div", { style:{ fontSize:12.5, fontWeight:600, color:T.dolar, marginBottom:3 } }, "Venta de " + p.mes + " · " + FTN(p.tn) + " · sin fecha de venta"),
+            h("div", { style:{ fontSize:11.5, color:T.faint, marginBottom:9, lineHeight:1.5 } }, "Indicá el día real de la venta y se corrige la planilla: el ticket se liquida con la pizarra del día hábil siguiente."),
+            h("div", { style:{ display:"flex", gap:8 } },
+              h("input", { type:"date", value:fixFechas[p.mes] || "", max: new Date().toISOString().slice(0,10),
+                onChange: e => setFixFechas(prev => ({ ...prev, [p.mes]: e.target.value })),
+                style:{ flex:1, minWidth:0, background:T.bg, border:`1px solid ${T.border}`, borderRadius:9, color:T.text, fontSize:13.5, fontFamily:"inherit", padding:"8px 10px", outline:"none", colorScheme:"dark" } }),
+              h("button", { onClick: () => asignarFecha(p.mes), disabled:fixSaving,
+                style:{ display:"flex", alignItems:"center", gap:6, padding:"8px 13px", background: fixSaving ? T.surface : T.soja, border:"none", borderRadius:9, color: fixSaving ? T.faint : T.bg, fontSize:12.5, fontWeight:700, cursor: fixSaving ? "default" : "pointer", flexShrink:0 } },
+                fixSaving ? "Guardando…" : "Asignar")
+            )
+          )),
+          fixMsg && h("div", { key:"fixmsg", style:{ display:"flex", alignItems:"flex-start", gap:7, marginBottom:10, fontSize:12.5, fontWeight:500, color: fixMsg.ok ? T.soja : T.red } },
+            ic(fixMsg.ok ? "circle-check" : "alert-triangle", 15), h("span", null, fixMsg.txt)),
+          repartos.length === 0 && pendientes.length === 0
+          ? h("div", { key:"vacio", style:{ fontSize:12.5, color:T.text3 } }, "Sin ventas registradas todavía.")
           : repartos.map((rp, i) => h("div", { key:rp.fecha, style:{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, padding:"10px 0", borderBottom: i < repartos.length-1 ? `1px solid ${T.surface2}` : "none" } },
               h("div", { style:{ minWidth:0 } },
                 h("div", { style:{ fontSize:13.5, fontWeight:600, color:T.text } }, "Venta del " + FDATE(rp.fecha) + " · " + FTN(rp.totalTn)),
@@ -687,6 +756,7 @@ function App() {
                 style:{ display:"flex", alignItems:"center", gap:6, padding:"8px 13px", background: rp.cotiz ? T.soja : T.surface2, border:"none", borderRadius:9, color: rp.cotiz ? T.bg : T.faint, fontSize:12.5, fontWeight:700, cursor: rp.cotiz ? "pointer" : "default", flexShrink:0 }
               }, ic("download", 15), "Ticket")
             ))
+        ]
     )
   );
 
