@@ -20,10 +20,11 @@ function doGet(e) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("VENTAS");
   const rows = sheet.getDataRange().getValues();
   return json({
-    version:     "ventas-3",          // marca para verificar que el deploy tomó el código nuevo
+    version:     "ventas-4",          // marca para verificar que el deploy tomó el código nuevo
     ventas:      parseVentas(rows),
     precios:     parsePrecios(rows),
     facturado:   parseFacturacion(),  // { total, ultimoMes:{mes,importe}, porMes }
+    movimientos: parseMovimientos(),  // log de ventas individuales (para tickets de reparto)
     actualizado: new Date().toISOString()
   });
 }
@@ -104,6 +105,7 @@ function doPost(e) {
         ventas:      parseVentas(fresh),
         precios:     parsePrecios(fresh),
         facturado:   parseFacturacion(),
+        movimientos: parseMovimientos(),
         actualizado: new Date().toISOString()
       });
     } finally {
@@ -210,6 +212,37 @@ function parseFacturacion() {
     if (porMes[m]) { ultimoMes = { mes: m, importe: redondear(porMes[m]) }; break; }
   }
   return { total: redondear(total), ultimoMes, porMes };
+}
+
+// Log de ventas individuales para los tickets de reparto. La fecha es el día en
+// que se registró la venta; el ticket se liquida en el frontend con la
+// cotización del día hábil SIGUIENTE (prices.json tiene la serie diaria).
+function parseMovimientos() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName("FACTURACION");
+  if (!sh || sh.getLastRow() < 2) return [];
+  const rows = sh.getDataRange().getValues();
+  const out = [];
+  for (let i = 1; i < rows.length; i++) { // salteamos el encabezado
+    const socio = String(rows[i][2] || "").trim();
+    const tn    = parsNum(rows[i][4]);
+    if (!socio || !(tn > 0)) continue;
+    out.push({
+      fecha:   fechaISO(rows[i][1]),
+      socio:   socio,
+      mes:     String(rows[i][3] || "").trim().toUpperCase(),
+      tn:      tn,
+      precio:  parsNum(rows[i][5]),
+      importe: parsNum(rows[i][6])
+    });
+  }
+  return out;
+}
+
+// Sheets puede devolver la columna fecha como Date (aunque se guardó como texto).
+function fechaISO(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, "America/Argentina/Buenos_Aires", "yyyy-MM-dd");
+  return String(v || "").trim();
 }
 
 // Backfill OPCIONAL para las ventas ya cargadas (que no tienen precio guardado).

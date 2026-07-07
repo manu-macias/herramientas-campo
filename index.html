@@ -193,6 +193,81 @@ function PriceCard({ label, value, unit, icon, accent, sub }) {
   );
 }
 
+const FTN = (n) => Number(n).toLocaleString("es-AR", { maximumFractionDigits: 2 }) + " tn";
+const FDATE = (f) => new Date(f + "T00:00:00").toLocaleDateString("es-AR");
+
+// Cotización del primer día hábil POSTERIOR a la venta (T+1): vendida un jueves
+// se liquida con la pizarra del viernes; un viernes, con la del lunes. El
+// historial diario tiene soja=null los días sin pizarra, así que basta buscar
+// el primer valor no nulo después de la fecha.
+function cotizacionSiguiente(hist, fecha) {
+  for (const p of hist) {
+    if (p.fecha && p.fecha > fecha && p.soja != null) return { fecha: p.fecha, soja: p.soja };
+  }
+  return null;
+}
+
+// Genera y descarga el ticket de reparto (PNG) de una venta.
+function descargarTicketReparto({ fechaVenta, cotiz, filas }) {
+  const precio  = cotiz.soja;
+  const totalTn = filas.reduce((a, f) => a + f.tn, 0);
+  const totalPs = Math.round(totalTn * precio);
+
+  const W = 900, rowH = 76, headH = 68, top = 172, totH = 82;
+  const H = top + headH + filas.length * rowH + 14 + totH + 36;
+  const cv = document.createElement("canvas");
+  cv.width = W * 2; cv.height = H * 2;
+  const x = cv.getContext("2d");
+  x.scale(2, 2);
+
+  const verde = "#1B5E20", verdeClaro = "#E9F4EA", gris = "#6B6B6B";
+  x.fillStyle = "#FFFFFF"; x.fillRect(0, 0, W, H);
+  x.textAlign = "center";
+  x.fillStyle = verde; x.font = "800 38px Inter, sans-serif";
+  x.fillText("Reparto de la venta", W / 2, 62);
+  x.fillStyle = gris; x.font = "400 25px Inter, sans-serif";
+  x.fillText("$" + FMT(totalPs) + "  ·  $" + FMT(precio) + " por tonelada", W / 2, 106);
+  x.font = "400 17px Inter, sans-serif";
+  x.fillText("Venta del " + FDATE(fechaVenta) + " · cotización pizarra BCR del " + FDATE(cotiz.fecha), W / 2, 140);
+
+  const L = 32, TW = W - 64;
+  const cx = [L + TW * 0.20, L + TW * 0.53, L + TW * 0.82];
+  const rr = (x0, y0, w0, h0, r) => {
+    x.beginPath(); x.moveTo(x0 + r, y0);
+    x.arcTo(x0 + w0, y0, x0 + w0, y0 + h0, r); x.arcTo(x0 + w0, y0 + h0, x0, y0 + h0, r);
+    x.arcTo(x0, y0 + h0, x0, y0, r); x.arcTo(x0, y0, x0 + w0, y0, r); x.closePath();
+  };
+
+  x.fillStyle = verde; rr(L, top, TW, headH, 14); x.fill();
+  x.fillStyle = "#FFFFFF"; x.font = "700 25px Inter, sans-serif";
+  ["Quién", "Toneladas", "Pesos"].forEach((t, i) => x.fillText(t, cx[i], top + headH / 2 + 9));
+
+  filas.forEach((f, i) => {
+    const y = top + headH + i * rowH;
+    if (i % 2 === 0) { x.fillStyle = verdeClaro; x.fillRect(L, y, TW, rowH); }
+    x.fillStyle = "#222222"; x.font = "400 25px Inter, sans-serif";
+    x.fillText(f.nombre, cx[0], y + rowH / 2 + 9);
+    x.fillText(FTN(f.tn), cx[1], y + rowH / 2 + 9);
+    x.fillStyle = verde; x.font = "700 25px Inter, sans-serif";
+    x.fillText("$" + FMT(Math.round(f.tn * precio)), cx[2], y + rowH / 2 + 9);
+  });
+
+  const ty = top + headH + filas.length * rowH + 14;
+  x.strokeStyle = verde; x.lineWidth = 2.5; rr(L, ty, TW, totH, 12); x.stroke();
+  x.fillStyle = verde; x.font = "700 27px Inter, sans-serif";
+  x.fillText("TOTAL", cx[0], ty + totH / 2 + 10);
+  x.fillText(FTN(totalTn), cx[1], ty + totH / 2 + 10);
+  x.fillText("$" + FMT(totalPs), cx[2], ty + totH / 2 + 10);
+
+  cv.toBlob(b => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(b);
+    a.download = "reparto-" + fechaVenta + ".png";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }, "image/png");
+}
+
 // Promedio de los últimos `dias` días del historial diario (ignora nulls).
 function avgHistory(history, key, refDate, dias) {
   const cutoff = new Date(refDate + "T00:00:00").getTime() - dias * 86400000;
@@ -506,6 +581,28 @@ function App() {
   const totalResto   = totalRow ? totalRow.resto : 0;
   const fact         = (apiData && apiData.facturado) ? apiData.facturado : { total:0, ultimoMes:null };
 
+  // Tickets de reparto: una venta = todas las filas del log con la misma fecha.
+  // Se excluyen las filas de backfill (fecha no-ISO), que no tienen día real.
+  const movsRaw  = apiData && Array.isArray(apiData.movimientos) ? apiData.movimientos : null;
+  const repartos = (() => {
+    if (!movsRaw) return [];
+    const byFecha = {};
+    movsRaw.forEach(m => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(m.fecha || "")) return;
+      (byFecha[m.fecha] = byFecha[m.fecha] || []).push(m);
+    });
+    const orden = ventas.map(r => r.nombre);
+    return Object.keys(byFecha).sort().reverse().map(fecha => {
+      const porSocio = {};
+      byFecha[fecha].forEach(m => { porSocio[m.socio] = (porSocio[m.socio] || 0) + m.tn; });
+      const filas = Object.keys(porSocio)
+        .sort((a, b) => orden.indexOf(a) - orden.indexOf(b))
+        .map(nombre => ({ nombre, tn: porSocio[nombre] }));
+      const totalTn = filas.reduce((a, f) => a + f.tn, 0);
+      return { fecha, filas, totalTn, cotiz: cotizacionSiguiente(priceHist, fecha) };
+    });
+  })();
+
   const loadingEl = h("div", { style:{ textAlign:"center", color:T.text3, padding:34, fontSize:13 } }, "Cargando datos de la planilla…");
   const errorEl   = h("div", { style:{ textAlign:"center", color:T.red, padding:34, fontSize:13 } }, apiErr);
 
@@ -566,6 +663,30 @@ function App() {
       "  ·  Facturado total: ", h("span", { style:{ color:T.soja, fontWeight:700 } }, "$" + FMT(fact.total)),
       fact.ultimoMes ? [ "  ·  Último mes (" + fact.ultimoMes.mes + "): ", h("span", { style:{ color:T.soja, fontWeight:700 } }, "$" + FMT(fact.ultimoMes.importe)) ] : null,
       "  ·  Resto: ", h("span", { style:{ color:T.score, fontWeight:700 } }, totalResto + " tn")
+    ),
+    h("div", { style:{ ...S.card, marginTop:14 } },
+      h("div", { style:{ display:"flex", alignItems:"center", gap:7, fontSize:12.5, fontWeight:600, color:T.text2, marginBottom:4 } },
+        ic("receipt", 16, T.soja), h("span", null, "Tickets de reparto")),
+      h("div", { style:{ fontSize:11.5, color:T.faint, marginBottom:10, lineHeight:1.5 } },
+        "Cada venta se liquida con la pizarra del día hábil siguiente: vendida un jueves paga la cotización del viernes; un viernes, la del lunes."),
+      movsRaw === null
+        ? h("div", { style:{ fontSize:12.5, color:T.text3 } }, "Para habilitar los tickets hay que actualizar el Apps Script de la planilla (pegá apps-script/Codigo.gs y redeployá).")
+        : repartos.length === 0
+          ? h("div", { style:{ fontSize:12.5, color:T.text3 } }, "Sin ventas registradas todavía.")
+          : repartos.map((rp, i) => h("div", { key:rp.fecha, style:{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, padding:"10px 0", borderBottom: i < repartos.length-1 ? `1px solid ${T.surface2}` : "none" } },
+              h("div", { style:{ minWidth:0 } },
+                h("div", { style:{ fontSize:13.5, fontWeight:600, color:T.text } }, "Venta del " + FDATE(rp.fecha) + " · " + FTN(rp.totalTn)),
+                h("div", { style:{ fontSize:11.5, color: rp.cotiz ? T.text3 : T.dolar, marginTop:2 } },
+                  rp.cotiz
+                    ? "Cotización " + FDATE(rp.cotiz.fecha) + " · $" + FMT(rp.cotiz.soja) + "/tn · total $" + FMT(Math.round(rp.totalTn * rp.cotiz.soja))
+                    : "Cotización pendiente — se toma la pizarra del próximo día hábil")
+              ),
+              h("button", {
+                onClick: () => rp.cotiz && descargarTicketReparto({ fechaVenta: rp.fecha, cotiz: rp.cotiz, filas: rp.filas }),
+                disabled: !rp.cotiz, "aria-label": "descargar ticket",
+                style:{ display:"flex", alignItems:"center", gap:6, padding:"8px 13px", background: rp.cotiz ? T.soja : T.surface2, border:"none", borderRadius:9, color: rp.cotiz ? T.bg : T.faint, fontSize:12.5, fontWeight:700, cursor: rp.cotiz ? "pointer" : "default", flexShrink:0 }
+              }, ic("download", 15), "Ticket")
+            ))
     )
   );
 
