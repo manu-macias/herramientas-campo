@@ -360,7 +360,6 @@ function App() {
   const [fixSaving, setFixSaving] = useState(false);
   const [fixMsg, setFixMsg]       = useState(null);
   const [editTicket, setEditTicket] = useState(null); // fecha del ticket que se está editando
-  const [confirmDel, setConfirmDel] = useState(null); // fecha del ticket pendiente de confirmar borrado
 
   const logout = () => { sessionStorage.removeItem("auth"); sessionStorage.removeItem("pw"); setAuth(false); };
 
@@ -659,33 +658,6 @@ function App() {
     }
   };
 
-  // Borra por completo una venta (todas las filas de esa fecha): resta de la
-  // grilla y limpia el log. Requiere dos toques (el botón pide confirmar).
-  const borrarTicket = async (fecha) => {
-    setConfirmDel(null);
-    setFixSaving(true); setFixMsg(null);
-    try {
-      await fetch(API_URL, {
-        method:"POST", mode:"no-cors", redirect:"follow",
-        body: JSON.stringify({ op:"borrar_venta", secret: sessionStorage.getItem("pw") || "", fecha }),
-      });
-      let fresh = null, ok = false;
-      for (let i = 0; i < 3 && !ok; i++) {
-        await new Promise(r => setTimeout(r, i === 0 ? 600 : 800));
-        fresh = await fetch(API_URL + "&_=" + Date.now()).then(r => r.json());
-        ok = !(fresh.movimientos || []).some(m => m.fecha === fecha);
-      }
-      if (fresh) setApiData(fresh);
-      setFixMsg(ok
-        ? { ok:true, txt:"Venta del " + FDATE(fecha) + " eliminada." }
-        : { ok:false, txt:"No se pudo borrar. Verificá que el Apps Script esté redeployado con la última versión." });
-    } catch (e) {
-      setFixMsg({ ok:false, txt:"Error: " + e.message });
-    } finally {
-      setFixSaving(false);
-    }
-  };
-
   // Cambia la fecha de un ticket YA generado (recalcula con la cotización T+1).
   const cambiarFechaTicket = async (fechaActual) => {
     const nueva = fixFechas["edit-" + fechaActual];
@@ -828,7 +800,7 @@ function App() {
                   ),
                   h("div", { style:{ display:"flex", alignItems:"center", gap:6, flexShrink:0 } },
                     h("button", {
-                      onClick: () => { setEditTicket(editando ? null : rp.fecha); setConfirmDel(null); setFixFechas(prev => ({ ...prev, ["edit-"+rp.fecha]: rp.fecha })); setFixMsg(null); },
+                      onClick: () => { setEditTicket(editando ? null : rp.fecha); setFixFechas(prev => ({ ...prev, ["edit-"+rp.fecha]: rp.fecha })); setFixMsg(null); },
                       "aria-label": "cambiar fecha de la venta",
                       style:{ display:"flex", alignItems:"center", gap:5, padding:"8px 11px", background: editando ? T.surface2 : "transparent", border:`1px solid ${T.borderStrong}`, borderRadius:9, color:T.text2, fontSize:12.5, fontWeight:600, cursor:"pointer" }
                     }, ic("calendar-event", 15), "Fecha"),
@@ -836,21 +808,8 @@ function App() {
                       onClick: () => rp.cotiz && descargarTicketReparto({ fechaVenta: rp.fecha, cotiz: rp.cotiz, filas: rp.filas }),
                       disabled: !rp.cotiz, "aria-label": "descargar ticket",
                       style:{ display:"flex", alignItems:"center", gap:6, padding:"8px 13px", background: rp.cotiz ? T.soja : T.surface2, border:"none", borderRadius:9, color: rp.cotiz ? T.bg : T.faint, fontSize:12.5, fontWeight:700, cursor: rp.cotiz ? "pointer" : "default" }
-                    }, ic("download", 15), "Ticket"),
-                    h("button", {
-                      onClick: () => { setConfirmDel(confirmDel === rp.fecha ? null : rp.fecha); setEditTicket(null); setFixMsg(null); },
-                      "aria-label": "borrar venta",
-                      style:{ display:"flex", alignItems:"center", justifyContent:"center", width:36, height:36, background:"transparent", border:`1px solid ${T.borderStrong}`, borderRadius:9, color: confirmDel === rp.fecha ? T.red : T.text3, cursor:"pointer" }
-                    }, ic("trash", 15))
+                    }, ic("download", 15), "Ticket")
                   )
-                ),
-                confirmDel === rp.fecha && h("div", { style:{ display:"flex", alignItems:"center", gap:8, marginTop:10, padding:"10px 12px", background:T.redBg, border:`1px solid ${T.redBorder}`, borderRadius:9 } },
-                  h("span", { style:{ flex:1, fontSize:12, color:T.text2, lineHeight:1.4 } }, "Se borra la venta completa y se resta de la grilla. No se puede deshacer."),
-                  h("button", { onClick: () => setConfirmDel(null),
-                    style:{ padding:"7px 11px", background:T.surface2, border:`1px solid ${T.border}`, borderRadius:8, color:T.text2, fontSize:12, fontWeight:600, cursor:"pointer", flexShrink:0 } }, "Cancelar"),
-                  h("button", { onClick: () => borrarTicket(rp.fecha), disabled:fixSaving,
-                    style:{ padding:"7px 11px", background:T.red, border:"none", borderRadius:8, color:"#fff", fontSize:12, fontWeight:700, cursor: fixSaving ? "default" : "pointer", flexShrink:0 } },
-                    fixSaving ? "Borrando…" : "Borrar")
                 ),
                 editando && h("div", { style:{ marginTop:10 } },
                   h("div", { style:{ display:"flex", gap:8 } },
