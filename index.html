@@ -372,7 +372,7 @@ function App() {
   };
 
   const registrarVenta = async () => {
-    const tn = Number(vForm.tn);
+    const tn = Number(String(vForm.tn).replace(",", "."));
     if (!vForm.socio || !vForm.mes || !tn || tn <= 0) {
       setVMsg({ ok:false, txt:"Completá socio, mes y toneladas (> 0)." });
       return;
@@ -715,8 +715,8 @@ function App() {
         h("option", { value:"" }, "Mes"),
         ...MESES_CAMP.map((m,i) => h("option", { key:i, value:m }, m))
       ),
-      h("input", { type:"number", inputMode:"decimal", step:"0.5", min:"0", placeholder:"Toneladas",
-        value:vForm.tn, onChange:e => setVForm(p => ({ ...p, tn:e.target.value })), style: inputBase })
+      h("input", { type:"text", inputMode:"decimal", placeholder:"Toneladas",
+        value:vForm.tn, onChange:e => setVForm(p => ({ ...p, tn: e.target.value.replace(/[^\d.,]/g, "") })), style: inputBase })
     ),
     h("button", { onClick:registrarVenta, disabled:vSaving,
       style:{ width:"100%", padding:12, background: vSaving ? T.surface2 : T.soja, border:"none", borderRadius:T.rs, color: vSaving ? T.faint : T.bg, fontSize:14, fontWeight:700, cursor: vSaving ? "default" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:7 } },
