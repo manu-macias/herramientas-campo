@@ -355,9 +355,6 @@ function App() {
   const [auth, setAuth]       = useState(() => sessionStorage.getItem("auth") === "1");
   const [tab, setTab]         = useState(0);
   const [v, setV]             = useState(DEFAULTS);
-  // Calculadora bidireccional: se guardan tn/usd y pesos como strings; al tipear
-  // uno se recalcula el otro con el precio de hoy (sin saltos en lo que se escribe).
-  const [calc, setCalc]       = useState({ tn:"", tnPesos:"", usd:"", usdPesos:"" });
   const [histSub, setHistSub] = useState(0);
   const [apiData, setApiData] = useState(null);
   const [apiLoad, setApiLoad] = useState(false);
@@ -365,7 +362,7 @@ function App() {
   const [priceHist, setPriceHist] = useState([]);
   const [priceDate, setPriceDate] = useState("");
   const [priceErr, setPriceErr]   = useState(false);
-  const [vForm, setVForm]   = useState({ socio:"", mes:"", tn:"" });
+  const [vForm, setVForm]   = useState({ socio:"", mes:"", tn:"", pesos:"" });
   const [vSaving, setVSaving] = useState(false);
   const [vMsg, setVMsg]     = useState(null);
   const [fixFechas, setFixFechas] = useState({});   // clave → fecha elegida (mes sin fecha o edición de ticket)
@@ -418,7 +415,7 @@ function App() {
       setApiData(fresh);
       if (after > before + 0.001) {
         setVMsg({ ok:true, txt:`Registradas ${tn} tn de ${vForm.socio} en ${vForm.mes}.` });
-        setVForm({ socio:"", mes:"", tn:"" });
+        setVForm({ socio:"", mes:"", tn:"", pesos:"" });
       } else {
         setVMsg({ ok:false, txt:"No se registró. Verificá la contraseña: cerrá sesión y volvé a entrar." });
       }
@@ -460,27 +457,14 @@ function App() {
       .catch(() => { setApiErr("No se pudo cargar la planilla."); setApiLoad(false); });
   }, [auth]);
 
-  // Cuando llegan los precios en vivo, recalcula los pesos con el precio nuevo.
-  useEffect(() => {
-    setCalc(c => {
-      const tnN = parseNum(c.tn), usdN = parseNum(c.usd);
-      return {
-        ...c,
-        tnPesos:  (v.soja_hoy  && tnN  != null) ? String(Math.round(tnN  * v.soja_hoy))  : c.tnPesos,
-        usdPesos: (v.dolar_hoy && usdN != null) ? String(Math.round(usdN * v.dolar_hoy)) : c.usdPesos,
-      };
-    });
-  }, [v.soja_hoy, v.dolar_hoy]);
-
   if (!auth) return h(Login, { onSuccess: () => setAuth(true) });
 
   const set = (k) => (val) => setV(prev => ({ ...prev, [k]: val }));
 
-  // Handlers de la calculadora bidireccional (tn↔pesos soja, usd↔pesos dólar).
-  const onTn      = (raw) => { const n = parseNum(raw); setCalc(c => ({ ...c, tn: raw,      tnPesos:  (v.soja_hoy  && n != null) ? String(Math.round(n * v.soja_hoy))            : "" })); };
-  const onTnPesos = (raw) => { const n = parseNum(raw); setCalc(c => ({ ...c, tnPesos: raw, tn:       (v.soja_hoy  && n != null) ? String(Math.round((n / v.soja_hoy)  * 100) / 100) : "" })); };
-  const onUsd     = (raw) => { const n = parseNum(raw); setCalc(c => ({ ...c, usd: raw,     usdPesos: (v.dolar_hoy && n != null) ? String(Math.round(n * v.dolar_hoy))           : "" })); };
-  const onUsdPesos= (raw) => { const n = parseNum(raw); setCalc(c => ({ ...c, usdPesos: raw, usd:     (v.dolar_hoy && n != null) ? String(Math.round((n / v.dolar_hoy) * 100) / 100) : "" })); };
+  // Calculadora bidireccional del form de venta: tn ↔ pesos al precio de soja de hoy.
+  // Se guarda tal cual lo que se tipea y se recalcula el otro campo (sin saltos).
+  const onVTn    = (raw) => { const n = parseNum(raw); setVForm(f => ({ ...f, tn: raw,    pesos: (v.soja_hoy && n != null) ? String(Math.round(n * v.soja_hoy))            : "" })); };
+  const onVPesos = (raw) => { const n = parseNum(raw); setVForm(f => ({ ...f, pesos: raw, tn:    (v.soja_hoy && n != null) ? String(Math.round((n / v.soja_hoy) * 100) / 100) : "" })); };
 
   const { score, soja_rel, dolar_rel, razones } = calcScore(v);
   const claro = Math.abs(score) > 1.2;
@@ -490,8 +474,8 @@ function App() {
   const vt = tint[verdict.cls];
 
   const pct = Math.max(5, Math.min(95, 50 + score * 18));
-  const sojaPs  = parseNum(calc.tnPesos);
-  const dolarPs = parseNum(calc.usdPesos);
+  const sojaPs  = v.soja_hoy  ? v.tn_soja   * v.soja_hoy  : null;
+  const dolarPs = v.dolar_hoy ? v.usd_dolar * v.dolar_hoy : null;
 
   const S = {
     page:  { maxWidth:520, margin:"0 auto", minHeight:"100vh", padding:"20px 16px 48px" },
@@ -574,36 +558,31 @@ function App() {
       h(Slider, { label:"Urgencia de pesos", value:v.urgencia, onChange:set("urgencia"), hint:"1 = tengo tiempo · 5 = ya" }),
       h(Slider, { label:"Expectativa soja",  value:v.expect_s, onChange:set("expect_s"), hint:"1 = va a bajar · 5 = a subir" })
     ),
-    h(SecLabel, null, "Calculadora — cuánto liquidar"),
-    h("div", { style:{ fontSize:11.5, color:T.faint, marginBottom:10 } }, "Tipeá toneladas o pesos y se convierte solo, al precio de hoy."),
-    h("div", { style:{ ...S.card, marginBottom:9 } },
-      h("div", { style:{ display:"flex", alignItems:"center", gap:7, fontSize:12.5, fontWeight:600, color:T.text2, marginBottom:11 } },
-        ic("plant-2", 16, T.soja), h("span", null, "Soja"),
-        h("span", { style:{ fontSize:11, fontWeight:400, color:T.faint } }, "· " + MON(v.soja_hoy) + "/tn")
-      ),
-      h("div", { style:{ display:"grid", gridTemplateColumns:"minmax(0, 1fr) minmax(0, 1fr)", gap:8 } },
-        convField("Toneladas", calc.tn, onTn, true),
-        convField("Pesos", calc.tnPesos, onTnPesos, false)
-      )
+    h(SecLabel, null, "Cuánto necesito liquidar"),
+    h("div", { style: S.grid2 },
+      h(NumInput, { label:"Tn de soja a vender", value:v.tn_soja,   onChange:set("tn_soja"),   unit:"toneladas", step:10, icon:"plant-2", accent:T.soja  }),
+      h(NumInput, { label:"USD a vender",         value:v.usd_dolar, onChange:set("usd_dolar"), unit:"dólares",   step:500, icon:"currency-dollar", accent:T.dolar })
     ),
-    h("div", { style:{ ...S.card, marginBottom:12 } },
-      h("div", { style:{ display:"flex", alignItems:"center", gap:7, fontSize:12.5, fontWeight:600, color:T.text2, marginBottom:11 } },
-        ic("currency-dollar", 16, T.dolar), h("span", null, "Dólar"),
-        h("span", { style:{ fontSize:11, fontWeight:400, color:T.faint } }, "· " + MON(v.dolar_hoy))
-      ),
-      h("div", { style:{ display:"grid", gridTemplateColumns:"minmax(0, 1fr) minmax(0, 1fr)", gap:8 } },
-        convField("Dólares", calc.usd, onUsd, true),
-        convField("Pesos", calc.usdPesos, onUsdPesos, false)
-      )
-    ),
-    (sojaPs != null && dolarPs != null) ? h("div", { style:{ ...S.card } },
-      h("div", { style:{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:13 } },
-        h("span", { style:{ color:T.text3 } }, "Conviene "),
-        h("span", { style:{ color: sojaPs>dolarPs ? T.soja : T.dolar, fontWeight:700 } },
-          (sojaPs>dolarPs ? "vender soja" : "vender dólares") + " · +$" + FMT(Math.abs(sojaPs-dolarPs))
+    h("div", { style:{ ...S.card, marginTop:12 } },
+      h("div", { style:{ display:"flex", alignItems:"center", gap:7, fontSize:12.5, fontWeight:600, color:T.text2, marginBottom:12 } }, ic("cash", 16, T.soja), h("span", null, "Equivalencia en pesos")),
+      h("div", { style: S.grid2 },
+        h("div", null,
+          h("div", { style:{ fontSize:12, color:T.text3, marginBottom:4 } }, "Si vendés soja"),
+          h("div", { style:{ fontSize:22, fontWeight:700, color:T.soja } }, MON(sojaPs)),
+          h("div", { style:{ fontSize:11.5, color:T.faint, marginTop:2 } }, v.tn_soja + " tn × " + MON(v.soja_hoy) + "/tn")
+        ),
+        h("div", null,
+          h("div", { style:{ fontSize:12, color:T.text3, marginBottom:4 } }, "Si vendés dólares"),
+          h("div", { style:{ fontSize:22, fontWeight:700, color:T.dolar } }, MON(dolarPs)),
+          h("div", { style:{ fontSize:11.5, color:T.faint, marginTop:2 } }, FMT(v.usd_dolar) + " USD × " + MON(v.dolar_hoy))
         )
+      ),
+      sojaPs != null && dolarPs != null && h("div", { style:{ marginTop:14, paddingTop:12, borderTop:`1px solid ${T.border}`, fontSize:13, color:T.text3 } },
+        "Diferencia: ",
+        h("span", { style:{ color: sojaPs>dolarPs ? T.soja : T.dolar, fontWeight:700 } }, "$" + FMT(Math.abs(sojaPs-dolarPs))),
+        " a favor de " + (sojaPs>dolarPs ? "vender soja" : "vender dólares")
       )
-    ) : null
+    )
   );
 
   const HIST_SUBS = [ { icon:"box", label:"Ventas" }, { icon:"chart-line", label:"Precios" } ];
@@ -741,7 +720,7 @@ function App() {
   const inputBase = { width:"100%", background:T.bg, border:`1px solid ${T.border}`, borderRadius:9, color:T.text, fontSize:14, fontFamily:"inherit", padding:"10px 11px", outline:"none" };
   const formVenta = h("div", { style:{ ...S.card, marginBottom:14 } },
     h("div", { style:{ display:"flex", alignItems:"center", gap:7, fontSize:12.5, fontWeight:600, color:T.text2, marginBottom:11 } }, ic("plus", 16, T.soja), h("span", null, "Registrar venta")),
-    h("div", { style:{ display:"grid", gridTemplateColumns:"repeat(3, minmax(0, 1fr))", gap:8, marginBottom:10 } },
+    h("div", { style:{ display:"grid", gridTemplateColumns:"minmax(0, 1fr) minmax(0, 1fr)", gap:8, marginBottom:10 } },
       h("select", { value:vForm.socio, onChange:e => setVForm(p => ({ ...p, socio:e.target.value })), style: inputBase },
         h("option", { value:"" }, "Socio"),
         ...ventas.map((r,i) => h("option", { key:i, value:r.nombre }, r.nombre))
@@ -749,9 +728,13 @@ function App() {
       h("select", { value:vForm.mes, onChange:e => setVForm(p => ({ ...p, mes:e.target.value })), style: inputBase },
         h("option", { value:"" }, "Mes"),
         ...MESES_CAMP.map((m,i) => h("option", { key:i, value:m }, m))
-      ),
-      h("input", { type:"text", inputMode:"decimal", placeholder:"Toneladas",
-        value:vForm.tn, onChange:e => setVForm(p => ({ ...p, tn: e.target.value.replace(/[^\d.,]/g, "") })), style: inputBase })
+      )
+    ),
+    h("div", { style:{ fontSize:11, color:T.faint, marginBottom:8 } },
+      "Cantidad — tipeá toneladas o pesos" + (v.soja_hoy ? " · " + MON(v.soja_hoy) + "/tn" : "")),
+    h("div", { style:{ display:"grid", gridTemplateColumns:"minmax(0, 1fr) minmax(0, 1fr)", gap:8, marginBottom:10 } },
+      convField("Toneladas", vForm.tn, onVTn, true),
+      convField("Pesos", vForm.pesos, onVPesos, false)
     ),
     h("button", { onClick:registrarVenta, disabled:vSaving,
       style:{ width:"100%", padding:12, background: vSaving ? T.surface2 : T.soja, border:"none", borderRadius:T.rs, color: vSaving ? T.faint : T.bg, fontSize:14, fontWeight:700, cursor: vSaving ? "default" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:7 } },
