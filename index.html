@@ -104,6 +104,15 @@ function Login({ onSuccess }) {
 const FMT = (n) => Number(n).toLocaleString("es-AR", { maximumFractionDigits: 0 });
 const MON = (n) => (n == null || isNaN(n)) ? "—" : "$" + FMT(n);
 const PCT = (v) => (v >= 0 ? "+" : "") + (v * 100).toFixed(1) + "%";
+// Parsea un string numérico tolerando coma decimal ("2,5" → 2.5). null si no es número.
+const parseNum = (s) => { const n = parseFloat(String(s).replace(",", ".")); return isNaN(n) ? null : n; };
+// Campo de la calculadora bidireccional. dec=true permite coma decimal; si no, solo enteros.
+const convField = (label, value, onChange, dec) => h("div", null,
+  h("div", { style:{ fontSize:11, color:T.text3, fontWeight:500, marginBottom:5 } }, label),
+  h("input", { type:"text", inputMode: dec ? "decimal" : "numeric", value, placeholder:"0",
+    onChange: e => onChange(e.target.value.replace(dec ? /[^\d.,]/g : /[^\d]/g, "")),
+    style:{ width:"100%", background:T.bg, border:`1px solid ${T.border}`, borderRadius:9, color:T.text, fontSize:18, fontWeight:700, fontFamily:"inherit", padding:"11px 12px", outline:"none" } })
+);
 
 // Los precios de mercado arrancan en null y se completan SOLO con prices.json:
 // nunca se muestra un número inventado como si fuera dato oficial.
@@ -346,6 +355,9 @@ function App() {
   const [auth, setAuth]       = useState(() => sessionStorage.getItem("auth") === "1");
   const [tab, setTab]         = useState(0);
   const [v, setV]             = useState(DEFAULTS);
+  // Calculadora bidireccional: se guardan tn/usd y pesos como strings; al tipear
+  // uno se recalcula el otro con el precio de hoy (sin saltos en lo que se escribe).
+  const [calc, setCalc]       = useState({ tn:"", tnPesos:"", usd:"", usdPesos:"" });
   const [histSub, setHistSub] = useState(0);
   const [apiData, setApiData] = useState(null);
   const [apiLoad, setApiLoad] = useState(false);
@@ -448,9 +460,27 @@ function App() {
       .catch(() => { setApiErr("No se pudo cargar la planilla."); setApiLoad(false); });
   }, [auth]);
 
+  // Cuando llegan los precios en vivo, recalcula los pesos con el precio nuevo.
+  useEffect(() => {
+    setCalc(c => {
+      const tnN = parseNum(c.tn), usdN = parseNum(c.usd);
+      return {
+        ...c,
+        tnPesos:  (v.soja_hoy  && tnN  != null) ? String(Math.round(tnN  * v.soja_hoy))  : c.tnPesos,
+        usdPesos: (v.dolar_hoy && usdN != null) ? String(Math.round(usdN * v.dolar_hoy)) : c.usdPesos,
+      };
+    });
+  }, [v.soja_hoy, v.dolar_hoy]);
+
   if (!auth) return h(Login, { onSuccess: () => setAuth(true) });
 
   const set = (k) => (val) => setV(prev => ({ ...prev, [k]: val }));
+
+  // Handlers de la calculadora bidireccional (tn↔pesos soja, usd↔pesos dólar).
+  const onTn      = (raw) => { const n = parseNum(raw); setCalc(c => ({ ...c, tn: raw,      tnPesos:  (v.soja_hoy  && n != null) ? String(Math.round(n * v.soja_hoy))            : "" })); };
+  const onTnPesos = (raw) => { const n = parseNum(raw); setCalc(c => ({ ...c, tnPesos: raw, tn:       (v.soja_hoy  && n != null) ? String(Math.round((n / v.soja_hoy)  * 100) / 100) : "" })); };
+  const onUsd     = (raw) => { const n = parseNum(raw); setCalc(c => ({ ...c, usd: raw,     usdPesos: (v.dolar_hoy && n != null) ? String(Math.round(n * v.dolar_hoy))           : "" })); };
+  const onUsdPesos= (raw) => { const n = parseNum(raw); setCalc(c => ({ ...c, usdPesos: raw, usd:     (v.dolar_hoy && n != null) ? String(Math.round((n / v.dolar_hoy) * 100) / 100) : "" })); };
 
   const { score, soja_rel, dolar_rel, razones } = calcScore(v);
   const claro = Math.abs(score) > 1.2;
@@ -460,8 +490,8 @@ function App() {
   const vt = tint[verdict.cls];
 
   const pct = Math.max(5, Math.min(95, 50 + score * 18));
-  const sojaPs  = v.soja_hoy  ? v.tn_soja   * v.soja_hoy  : null;
-  const dolarPs = v.dolar_hoy ? v.usd_dolar * v.dolar_hoy : null;
+  const sojaPs  = parseNum(calc.tnPesos);
+  const dolarPs = parseNum(calc.usdPesos);
 
   const S = {
     page:  { maxWidth:520, margin:"0 auto", minHeight:"100vh", padding:"20px 16px 48px" },
@@ -544,31 +574,36 @@ function App() {
       h(Slider, { label:"Urgencia de pesos", value:v.urgencia, onChange:set("urgencia"), hint:"1 = tengo tiempo · 5 = ya" }),
       h(Slider, { label:"Expectativa soja",  value:v.expect_s, onChange:set("expect_s"), hint:"1 = va a bajar · 5 = a subir" })
     ),
-    h(SecLabel, null, "Cuánto necesito liquidar"),
-    h("div", { style: S.grid2 },
-      h(NumInput, { label:"Tn de soja a vender", value:v.tn_soja,   onChange:set("tn_soja"),   unit:"toneladas", step:10, icon:"plant-2", accent:T.soja  }),
-      h(NumInput, { label:"USD a vender",         value:v.usd_dolar, onChange:set("usd_dolar"), unit:"dólares",   step:500, icon:"currency-dollar", accent:T.dolar })
-    ),
-    h("div", { style:{ ...S.card, marginTop:12 } },
-      h("div", { style:{ display:"flex", alignItems:"center", gap:7, fontSize:12.5, fontWeight:600, color:T.text2, marginBottom:12 } }, ic("cash", 16, T.soja), h("span", null, "Equivalencia en pesos")),
-      h("div", { style: S.grid2 },
-        h("div", null,
-          h("div", { style:{ fontSize:12, color:T.text3, marginBottom:4 } }, "Si vendés soja"),
-          h("div", { style:{ fontSize:22, fontWeight:700, color:T.soja } }, MON(sojaPs)),
-          h("div", { style:{ fontSize:11.5, color:T.faint, marginTop:2 } }, v.tn_soja + " tn × " + MON(v.soja_hoy) + "/tn")
-        ),
-        h("div", null,
-          h("div", { style:{ fontSize:12, color:T.text3, marginBottom:4 } }, "Si vendés dólares"),
-          h("div", { style:{ fontSize:22, fontWeight:700, color:T.dolar } }, MON(dolarPs)),
-          h("div", { style:{ fontSize:11.5, color:T.faint, marginTop:2 } }, FMT(v.usd_dolar) + " USD × " + MON(v.dolar_hoy))
-        )
+    h(SecLabel, null, "Calculadora — cuánto liquidar"),
+    h("div", { style:{ fontSize:11.5, color:T.faint, marginBottom:10 } }, "Tipeá toneladas o pesos y se convierte solo, al precio de hoy."),
+    h("div", { style:{ ...S.card, marginBottom:9 } },
+      h("div", { style:{ display:"flex", alignItems:"center", gap:7, fontSize:12.5, fontWeight:600, color:T.text2, marginBottom:11 } },
+        ic("plant-2", 16, T.soja), h("span", null, "Soja"),
+        h("span", { style:{ fontSize:11, fontWeight:400, color:T.faint } }, "· " + MON(v.soja_hoy) + "/tn")
       ),
-      sojaPs != null && dolarPs != null && h("div", { style:{ marginTop:14, paddingTop:12, borderTop:`1px solid ${T.border}`, fontSize:13, color:T.text3 } },
-        "Diferencia: ",
-        h("span", { style:{ color: sojaPs>dolarPs ? T.soja : T.dolar, fontWeight:700 } }, "$" + FMT(Math.abs(sojaPs-dolarPs))),
-        " a favor de " + (sojaPs>dolarPs ? "vender soja" : "vender dólares")
+      h("div", { style:{ display:"grid", gridTemplateColumns:"minmax(0, 1fr) minmax(0, 1fr)", gap:8 } },
+        convField("Toneladas", calc.tn, onTn, true),
+        convField("Pesos", calc.tnPesos, onTnPesos, false)
       )
-    )
+    ),
+    h("div", { style:{ ...S.card, marginBottom:12 } },
+      h("div", { style:{ display:"flex", alignItems:"center", gap:7, fontSize:12.5, fontWeight:600, color:T.text2, marginBottom:11 } },
+        ic("currency-dollar", 16, T.dolar), h("span", null, "Dólar"),
+        h("span", { style:{ fontSize:11, fontWeight:400, color:T.faint } }, "· " + MON(v.dolar_hoy))
+      ),
+      h("div", { style:{ display:"grid", gridTemplateColumns:"minmax(0, 1fr) minmax(0, 1fr)", gap:8 } },
+        convField("Dólares", calc.usd, onUsd, true),
+        convField("Pesos", calc.usdPesos, onUsdPesos, false)
+      )
+    ),
+    (sojaPs != null && dolarPs != null) ? h("div", { style:{ ...S.card } },
+      h("div", { style:{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:13 } },
+        h("span", { style:{ color:T.text3 } }, "Conviene "),
+        h("span", { style:{ color: sojaPs>dolarPs ? T.soja : T.dolar, fontWeight:700 } },
+          (sojaPs>dolarPs ? "vender soja" : "vender dólares") + " · +$" + FMT(Math.abs(sojaPs-dolarPs))
+        )
+      )
+    ) : null
   );
 
   const HIST_SUBS = [ { icon:"box", label:"Ventas" }, { icon:"chart-line", label:"Precios" } ];
