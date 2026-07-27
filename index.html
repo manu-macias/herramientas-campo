@@ -52,7 +52,7 @@ const ic = (name, size, color) => h("i", { className:"ti ti-"+name, "aria-hidden
 const stepBtn = (name, onClick) => h("button", { type:"button", onClick, "aria-label": name==="plus"?"sumar":"restar",
   style:{ width:32, height:32, flexShrink:0, borderRadius:9, background:T.surface2, border:`1px solid ${T.borderStrong}`, color:T.text2, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" } }, ic(name, 16));
 
-const PASS_HASH = "7dca3a2295651cd47867174d10fd26f1c0f6b0bc09393552309c4c9a5fdbee94";
+const PASS_HASH = "019fc34a361b7237613ea6b59669379602c0657b59f2dd59ecdfeb13c444349f";
 
 async function hashStr(str) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));

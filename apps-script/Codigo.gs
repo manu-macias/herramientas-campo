@@ -9,7 +9,7 @@ const TOKEN = "campo-soja-2026";
 // Hash SHA-256 de la contraseña del sitio (el mismo PASS_HASH del index.html).
 // Sirve para validar las escrituras: el cliente manda la contraseña en texto,
 // acá se la hashea y se compara. Solo el hash (irreversible) queda en el código.
-const PASS_HASH = "7dca3a2295651cd47867174d10fd26f1c0f6b0bc09393552309c4c9a5fdbee94";
+const PASS_HASH = "019fc34a361b7237613ea6b59669379602c0657b59f2dd59ecdfeb13c444349f";
 
 const MESES_CAMP = ["JUN","JUL","AGO","SEP","OCT","NOV","DIC","ENE","FEB","MAR","ABR","MAY"];
 
