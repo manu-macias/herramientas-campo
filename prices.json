@@ -1,6 +1,6 @@
 {
   "soja": 560000,
-  "dolar": 1540,
+  "dolar": 1535,
   "fecha": "2026-10-09",
   "fuentes": {
     "soja": "https://api.bcr.com.ar/gix/v1.0/PreciosCamara (Cámara Arbitral BCR, serie diaria) · fallback: scrape pizarra",
@@ -1869,13 +1869,13 @@
     },
     {
       "fecha": "2026-10-08",
-      "soja": null,
+      "soja": 560000,
       "dolar": 1540
     },
     {
       "fecha": "2026-10-09",
       "soja": null,
-      "dolar": 1540
+      "dolar": 1535
     }
   ]
 }
