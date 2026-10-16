@@ -1,17 +1,12 @@
 {
-  "soja": 557000,
-  "dolar": 1530,
-  "fecha": "2026-10-15",
+  "soja": 560000,
+  "dolar": 1535,
+  "fecha": "2026-10-16",
   "fuentes": {
     "soja": "https://api.bcr.com.ar/gix/v1.0/PreciosCamara (Cámara Arbitral BCR, serie diaria) · fallback: scrape pizarra",
     "dolar": "https://dolarapi.com/v1/dolares/oficial (Dólar Oficial BCRA) · historia: ArgentinaDatos"
   },
   "history": [
-    {
-      "fecha": "2025-09-10",
-      "soja": 420000,
-      "dolar": 1435
-    },
     {
       "fecha": "2025-09-11",
       "soja": 425000,
@@ -1869,8 +1864,13 @@
     },
     {
       "fecha": "2026-10-15",
-      "soja": null,
+      "soja": 560000,
       "dolar": 1530
+    },
+    {
+      "fecha": "2026-10-16",
+      "soja": null,
+      "dolar": 1535
     }
   ]
 }
